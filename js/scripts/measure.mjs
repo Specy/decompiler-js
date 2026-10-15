@@ -130,7 +130,9 @@ const image = (name) => ({ ...readElfImage(new Uint8Array(readFileSync(new URL(n
     }
 
     const all = []
-    let inventedNames = 0
+    // Calls to an address the image names no function at, which the
+    // decompiler names itself (func_0x00401000).
+    let unnamedCalls = 0
     const [totalMs] = time(() => {
         for (const fn of functions) {
             const [elapsed, result] = time(() => program.decompile(fn.address))
@@ -138,7 +140,7 @@ const image = (name) => ({ ...readElfImage(new Uint8Array(readFileSync(new URL(n
             if ('error' in result) continue
             for (const line of result.lines)
                 for (const token of line.tokens)
-                    if (token.kind === 'function' && line.text.slice(token.start, token.end).startsWith('FUN_')) inventedNames++
+                    if (token.kind === 'function' && line.text.slice(token.start, token.end).startsWith('func_0x')) unnamedCalls++
         }
     })
     const times = all.map((entry) => entry.ms).sort((a, b) => a - b)
@@ -155,7 +157,7 @@ const image = (name) => ({ ...readElfImage(new Uint8Array(readFileSync(new URL(n
             .sort((a, b) => b.ms - a.ms)
             .slice(0, 5)
             .map(({ name, ms: elapsed }) => ({ name, ms: ms(elapsed) })),
-        callsToFunctionsNamedFUN_: inventedNames,
+        unnamedCalls,
         memoryAfter: mb(decompiler.memory())
     }
     program.dispose()
