@@ -28,10 +28,12 @@ class HostArchitecture;
 /// One program image under a SleighArchitecture configured as Ghidra's Java
 /// side configures its decompiler process: Ghidra's names for the core types,
 /// read-only memory propagating as constants, the image's functions and data
-/// as named symbols and its strings as character arrays. Errors from Ghidra
-/// surface as std::runtime_error carrying Ghidra's explanation.
+/// as named symbols, its strings as character arrays, and its prototypes
+/// bound to its functions by name. Errors from Ghidra surface as
+/// std::runtime_error carrying Ghidra's explanation.
 class Program {
   std::ostringstream messages;
+  std::vector<std::string> declarationWarnings;
   std::unique_ptr<HostArchitecture> architecture;
 
  public:
@@ -44,8 +46,10 @@ class Program {
   /// the image's functions.
   std::string decompile(uint64_t address);
 
-  /// Messages Ghidra printed while building the architecture.
-  std::string warnings() const { return messages.str(); }
+  /// What went wrong building the program without stopping it: each line
+  /// Ghidra printed while building the architecture, then each declaration
+  /// of the image's prototypes that could not be read or applied.
+  std::vector<std::string> warnings() const;
 
   /// Writes the program as a save file of Ghidra's XmlArchitecture: the
   /// regions, the core types, the data-types and the symbols, which the

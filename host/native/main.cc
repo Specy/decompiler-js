@@ -1,9 +1,11 @@
 // The native reference driver: decompiles one function of an ELF executable
 // through the host layer, as the wasm build does, so the two can be compared.
 //
-//   decompile [--save <file.xml>] [--repeat <n>] <spec directory> <elf> <function name or 0xaddress>
+//   decompile [--prototypes <file.h>] [--save <file.xml>] [--repeat <n>]
+//             <spec directory> <elf> <function name or 0xaddress>
 //
-// Prints the C to stdout and the times to stderr. --save also writes the
+// Prints the C to stdout, and the times and warnings to stderr. --prototypes
+// passes a file of C declarations with the program image. --save also writes the
 // program as a save file of Ghidra's XmlArchitecture, which Ghidra's own
 // console (build/native/decomp_console) restores to cross-check this driver.
 #include <chrono>
@@ -34,18 +36,19 @@ std::string readFile(const std::string &path) {
 }  // namespace
 
 int main(int argc, char **argv) {
-  std::string savePath;
+  std::string savePath, prototypesPath;
   int repeat = 1;
   int i = 1;
   for (; i + 1 < argc && argv[i][0] == '-'; i += 2) {
     std::string option = argv[i];
     if (option == "--save") savePath = argv[i + 1];
+    else if (option == "--prototypes") prototypesPath = argv[i + 1];
     else if (option == "--repeat") repeat = std::stoi(argv[i + 1]);
     else break;
   }
   if (argc - i != 3) {
-    std::cerr << "usage: decompile [--save <file.xml>] [--repeat <n>] <spec directory> <elf> "
-                 "<function name or 0xaddress>\n";
+    std::cerr << "usage: decompile [--prototypes <file.h>] [--save <file.xml>] [--repeat <n>] "
+                 "<spec directory> <elf> <function name or 0xaddress>\n";
     return 2;
   }
   std::string specDirectory = argv[i], elfPath = argv[i + 1], target = argv[i + 2];
@@ -53,6 +56,7 @@ int main(int argc, char **argv) {
   try {
     std::string elf = readFile(elfPath);
     host::ProgramImage image = host::readElfImage(std::vector<uint8_t>(elf.begin(), elf.end()));
+    if (!prototypesPath.empty()) image.prototypes = readFile(prototypesPath);
 
     uint64_t address = 0;
     bool found = false;
@@ -87,7 +91,7 @@ int main(int argc, char **argv) {
     }
     std::cerr << "architecture: " << std::fixed << std::setprecision(1) << build << " ms ("
               << host::ghidraVersion() << ")\n";
-    if (!program.warnings().empty()) std::cerr << program.warnings();
+    for (const std::string &warning : program.warnings()) std::cerr << "warning: " << warning << "\n";
     std::cout << text;
     return 0;
   } catch (const std::exception &error) {

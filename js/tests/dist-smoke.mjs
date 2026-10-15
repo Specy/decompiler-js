@@ -34,7 +34,10 @@ const decompiler = await loadDecompiler({ architecture: 'x86-64' })
 assert.match(decompiler.version, /^Ghidra_12\.1\.4_build [0-9a-f]{12}$/)
 
 const fixtures = new URL('./fixtures/', import.meta.url)
-const image = readElfImage(new Uint8Array(readFileSync(new URL('elf/crackme', fixtures))))
+const image = {
+    ...readElfImage(new Uint8Array(readFileSync(new URL('elf/crackme', fixtures)))),
+    prototypes: readFileSync(new URL('prototypes.h', fixtures), 'utf8')
+}
 const main = image.functions.find((fn) => fn.name === 'main')
 const program = decompiler.openProgram(image)
 const result = program.decompile(main.address)

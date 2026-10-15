@@ -3,22 +3,23 @@ undefined8 main(void)
 
 {
   int iVar1;
-  long lVar2;
+  char *pcVar2;
   undefined8 uVar3;
+  size_t sVar4;
   long in_FS_OFFSET;
-  undefined1 auStack_98 [136];
+  char acStack_98 [136];
   long lStack_10;
   
   lStack_10 = *(long *)(in_FS_OFFSET + 0x28);
   printf("Enter password: ");
-  lVar2 = fgets(auStack_98,0x80,stdin);
-  if (lVar2 == 0) {
+  pcVar2 = fgets(acStack_98,0x80,stdin);
+  if (pcVar2 == (char *)0x0) {
     uVar3 = 1;
   }
   else {
-    lVar2 = strcspn(auStack_98,0x2015);
-    auStack_98[lVar2] = 0;
-    iVar1 = strcmp(auStack_98,"hunter2");
+    sVar4 = strcspn(acStack_98,"\n");
+    acStack_98[sVar4] = '\0';
+    iVar1 = strcmp(acStack_98,"hunter2");
     if (iVar1 == 0) {
       puts("Correct!");
     }
@@ -28,7 +29,8 @@ undefined8 main(void)
     uVar3 = 0;
   }
   if (lStack_10 != *(long *)(in_FS_OFFSET + 0x28)) {
-    uVar3 = __stack_chk_fail();
+                    /* WARNING: Subroutine does not return */
+    __stack_chk_fail();
   }
   return uVar3;
 }

@@ -9,12 +9,29 @@
 
 namespace host {
 
-/// Registers the core types Ghidra's PcodeDataTypeManager.generateCoreTypes
-/// sends a decompiler process, with the sizes of the compiler specification's
-/// <data_organization> (or Ghidra's DataOrganizationImpl defaults where it is
-/// silent), then caches them. compilerSpec is the <compiler_spec> element,
+/// The parts of Ghidra's DataOrganization the core types and the C type names
+/// depend on, with DataOrganizationImpl's defaults.
+struct DataOrganization {
+  int charSize = 1;
+  bool signedChar = true;
+  int wideCharSize = 2;
+  int shortSize = 2;
+  int intSize = 4;
+  int longSize = 4;
+  int longLongSize = 8;
+  int floatSize = 4;
+  int doubleSize = 8;
+  int longDoubleSize = 8;
+};
+
+/// The sizes a compiler specification's <data_organization> gives, or the
+/// defaults where it is silent. compilerSpec is the <compiler_spec> element,
 /// or null for the defaults.
-void buildGhidraCoreTypes(ghidra::TypeFactory &types, const ghidra::Element *compilerSpec);
+DataOrganization readDataOrganization(const ghidra::Element *compilerSpec);
+
+/// Registers the core types Ghidra's PcodeDataTypeManager.generateCoreTypes
+/// sends a decompiler process for that data organization, then caches them.
+void buildGhidraCoreTypes(ghidra::TypeFactory &types, const DataOrganization &org);
 
 }  // namespace host
 

@@ -101,6 +101,7 @@ ProgramImage readProgramImage(const uint8_t *bytes, size_t size) {
     string.length = in.u64();
     image.strings.push_back(string);
   }
+  image.prototypes = in.text();
   if (!in.done()) throw std::invalid_argument("The program image has bytes past its end");
   return image;
 }

@@ -2,7 +2,7 @@
 // memory, the names of its functions and data, where its strings are) and
 // asks for a function's C.
 //
-// Still to come: prototypes and the token-to-address markup.
+// Still to come: the token-to-address markup.
 import createDecompilerModule from './wasm/decompiler.mjs'
 import type { DecompilerModule } from './wasm/decompiler.mjs'
 
@@ -52,13 +52,29 @@ export interface ProgramString {
 export interface ProgramImage {
     regions: ProgramRegion[]
     functions: ProgramFunction[]
-    data?: ProgramData[]
-    strings?: ProgramString[]
+    data: ProgramData[]
+    strings: ProgramString[]
+    /**
+     * C declarations, read by the decompiler's own C parser: prototypes,
+     * bound to the functions of the same name (`strcmp` gets `int strcmp(const
+     * char *s1, const char *s2);`); the typedefs, structs and enums they use;
+     * and the types of data by name (`extern FILE *stdin;`). `_Noreturn`,
+     * `[[noreturn]]` or `__attribute__((noreturn))` marks a function that does
+     * not return. A declaration that cannot be read is skipped and reported in
+     * the program's `warnings`. The package's `prototypes/glibc.h` declares
+     * glibc's.
+     */
+    prototypes: string
 }
 
 export type DecompiledFunction = { address: number; text: string } | { address: number; error: string }
 
 export interface DecompiledProgram {
+    /** What went wrong opening the program without stopping it: each
+     * declaration of the image's prototypes that could not be read or
+     * applied, with its line ("line 3: Syntax error after `size_tt` (in
+     * `size_tt strlen(const char *s);`)"), and any message Ghidra printed. */
+    readonly warnings: readonly string[]
     /** The C of the function starting at the address, one of the image's
      * functions, or the reason there is none. */
     decompile(address: number): DecompiledFunction
@@ -152,8 +168,16 @@ export async function loadDecompiler(options: LoadDecompilerOptions): Promise<De
         openProgram(image) {
             live()
             const handle = buildProgram(module, image, architecture.language)
+            const warningsJson = module._program_warnings(handle)
+            let warnings: string[]
+            try {
+                warnings = JSON.parse(module.UTF8ToString(warningsJson))
+            } finally {
+                module._free(warningsJson)
+            }
             let open = true
             const program: DecompiledProgram = {
+                warnings,
                 decompile(address) {
                     if (!open) throw new Error('The program was disposed')
                     const text = module._program_decompile(handle, address)
@@ -186,13 +210,15 @@ export async function loadDecompiler(options: LoadDecompilerOptions): Promise<De
 function encodeImage(image: ProgramImage): Uint8Array {
     const utf8 = new TextEncoder()
     const functions = image.functions.map((fn) => ({ address: fn.address, name: utf8.encode(fn.name) }))
-    const data = (image.data ?? []).map((entry) => ({ ...entry, name: utf8.encode(entry.name) }))
-    const strings = image.strings ?? []
+    const data = image.data.map((entry) => ({ ...entry, name: utf8.encode(entry.name) }))
+    const strings = image.strings
+    const prototypes = utf8.encode(image.prototypes)
     let size = 8 + 16
     for (const region of image.regions) size += 16 + region.bytes.length
     for (const fn of functions) size += 12 + fn.name.length
     for (const entry of data) size += 20 + entry.name.length
     size += 16 * strings.length
+    size += 4 + prototypes.length
 
     const bytes = new Uint8Array(size)
     const view = new DataView(bytes.buffer)
@@ -237,6 +263,8 @@ function encodeImage(image: ProgramImage): Uint8Array {
         u64(string.address)
         u64(string.length)
     }
+    u32(prototypes.length)
+    raw(prototypes)
     return bytes
 }
 

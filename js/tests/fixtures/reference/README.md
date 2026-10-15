@@ -15,9 +15,9 @@ The program image is what the driver reads from the ELF (`host/native/elf_image.
 `../../helpers/elf-image.ts`): each `PT_LOAD` segment at its link-time address (read-only unless
 writable); as function names every defined `STT_FUNC` symbol plus the PLT stubs named after
 their relocations' symbols; as data every defined `STT_OBJECT` symbol, without its version, and
-the strings of `.rodata` named `s_` and their first words, as the editor's Listing names them.
-Types print with Ghidra's names (`undefined8`, `long`). No prototypes are given yet, so calls
-return `long`.
+the strings of `.rodata` named `s_` and their first words, as the editor's Listing names them;
+and as prototypes `../prototypes.h`, a few of glibc's declarations. Types print with Ghidra's
+names (`undefined8`, `long`, `size_t`).
 
 | File | Produced with |
 | --- | --- |

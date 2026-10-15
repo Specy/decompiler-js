@@ -7,23 +7,6 @@ namespace host {
 
 using namespace ghidra;
 
-namespace {
-
-/// The parts of Ghidra's DataOrganization the core types depend on, with
-/// DataOrganizationImpl's defaults.
-struct DataOrganization {
-  int charSize = 1;
-  bool signedChar = true;
-  int wideCharSize = 2;
-  int shortSize = 2;
-  int intSize = 4;
-  int longSize = 4;
-  int longLongSize = 8;
-  int floatSize = 4;
-  int doubleSize = 8;
-  int longDoubleSize = 8;
-};
-
 DataOrganization readDataOrganization(const Element *compilerSpec) {
   DataOrganization org;
   if (compilerSpec == nullptr) return org;
@@ -53,11 +36,7 @@ DataOrganization readDataOrganization(const Element *compilerSpec) {
   return org;
 }
 
-}  // namespace
-
-void buildGhidraCoreTypes(TypeFactory &types, const Element *compilerSpec) {
-  DataOrganization org = readDataOrganization(compilerSpec);
-
+void buildGhidraCoreTypes(TypeFactory &types, const DataOrganization &org) {
   types.setCoreType("void", 1, TYPE_VOID, false);
   for (int size = 1; size <= 8; ++size)
     types.setCoreType("undefined" + std::to_string(size), size, TYPE_UNKNOWN, false);

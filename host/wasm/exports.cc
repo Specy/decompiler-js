@@ -8,6 +8,7 @@
 #include <exception>
 #include <string>
 
+#include "json.hh"
 #include "program.hh"
 
 namespace {
@@ -58,6 +59,12 @@ EMSCRIPTEN_KEEPALIVE host::Program *program_open(const uint8_t *image, uint32_t 
     fail(error);
     return nullptr;
   }
+}
+
+/// What went wrong building the program without stopping it (see
+/// Program::warnings), as a JSON array of strings, to be freed with free().
+EMSCRIPTEN_KEEPALIVE char *program_warnings(host::Program *program) {
+  return copyString(host::jsonStrings(program->warnings()));
 }
 
 /// The C of the function at the address, to be freed with free(), or null.

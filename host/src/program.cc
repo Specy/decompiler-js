@@ -5,6 +5,7 @@
 #include <stdexcept>
 
 #include "core_types.hh"
+#include "declarations.hh"
 #include "image_load_image.hh"
 #include "libdecomp.hh"
 
@@ -35,7 +36,8 @@ class HostArchitecture : public SleighArchitecture {
 
   // buildSpecFile has registered the compiler specification by then.
   void buildCoreTypes(DocumentStorage &store) override {
-    buildGhidraCoreTypes(*types, store.getTag("compiler_spec"));
+    organization = readDataOrganization(store.getTag("compiler_spec"));
+    buildGhidraCoreTypes(*types, organization);
   }
 
   void postSpecFile(void) override {
@@ -46,6 +48,8 @@ class HostArchitecture : public SleighArchitecture {
  public:
   HostArchitecture(ProgramImage image, const std::string &languageId, std::ostream *errors)
       : SleighArchitecture("image", languageId, errors), pendingImage(std::move(image)) {}
+
+  DataOrganization organization;
 
   const ImageLoadImage &image() const { return *static_cast<const ImageLoadImage *>(loader); }
 
@@ -116,8 +120,10 @@ Program::Program(ProgramImage image, const std::string &languageId) {
     normalize(image);
     std::vector<DataName> data = std::move(image.data);
     std::vector<StringRange> strings = std::move(image.strings);
+    std::string prototypes = std::move(image.prototypes);
     image.data.clear();
     image.strings.clear();
+    image.prototypes.clear();
     architecture.reset(new HostArchitecture(std::move(image), languageId, &messages));
     DocumentStorage store;
     architecture->init(store);
@@ -128,6 +134,7 @@ Program::Program(ProgramImage image, const std::string &languageId) {
     architecture->options->set(ELEM_READONLY.getId(), "on");
     architecture->readLoaderSymbols("::");
     architecture->addData(data, strings);
+    declarationWarnings = applyDeclarations(*architecture, architecture->organization, prototypes);
   } catch (const std::invalid_argument &error) {
     throw std::runtime_error(error.what());
   } catch (...) {
@@ -136,6 +143,15 @@ Program::Program(ProgramImage image, const std::string &languageId) {
 }
 
 Program::~Program() = default;
+
+std::vector<std::string> Program::warnings() const {
+  std::vector<std::string> all;
+  std::istringstream lines(messages.str());
+  for (std::string line; std::getline(lines, line);)
+    if (!line.empty()) all.push_back(line);
+  all.insert(all.end(), declarationWarnings.begin(), declarationWarnings.end());
+  return all;
+}
 
 std::string Program::decompile(uint64_t address) {
   try {

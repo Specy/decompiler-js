@@ -46,6 +46,9 @@ struct ProgramImage {
   std::vector<FunctionName> functions;
   std::vector<DataName> data;
   std::vector<StringRange> strings;
+  /// C declarations of the library functions the program calls, the types
+  /// they need and its global variables' types (see declarations.hh).
+  std::string prototypes;
 };
 
 /// Sorts the regions, functions, data and strings by address. Keeps the first
@@ -63,6 +66,7 @@ void normalize(ProgramImage &image);
 ///   u32 count, then per function: u64 address, u32 size, name
 ///   u32 count, then per data:     u64 address, u64 size (0 unknown), u32 size, name
 ///   u32 count, then per string:   u64 address, u64 length
+///   u32 size, the prototypes
 ///
 /// Throws std::invalid_argument on a malformed buffer.
 ProgramImage readProgramImage(const uint8_t *bytes, size_t size);
