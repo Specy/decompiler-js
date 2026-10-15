@@ -1,0 +1,38 @@
+{
+    "name": "@specy/decompiler",
+    "type": "module",
+    "version": "0.0.0",
+    "description": "Ghidra's decompiler compiled to WebAssembly",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Specy/decompiler-js.git",
+        "directory": "js"
+    },
+    "license": "Apache-2.0",
+    "types": "./dist/index.d.mts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.mts",
+            "import": "./dist/index.mjs",
+            "default": "./dist/index.mjs"
+        },
+        "./prototypes/glibc.h": "./dist/prototypes/glibc.h",
+        "./package.json": "./package.json"
+    },
+    "files": ["dist"],
+    "scripts": {
+        "build": "tsdown && node scripts/copy-assets.mjs",
+        "build:specs": "../scripts/compile_specs.sh",
+        "build:wasm": "../scripts/compile_decompiler.sh",
+        "dev": "tsdown --watch",
+        "test": "vitest run",
+        "test:dist": "node tests/dist-smoke.mjs",
+        "type-check": "tsc --noEmit"
+    },
+    "devDependencies": {
+        "@types/node": "^22.10.2",
+        "tsdown": "^0.21.7",
+        "typescript": "^6.0.2",
+        "vitest": "^3.0.0"
+    }
+}
