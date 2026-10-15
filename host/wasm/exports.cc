@@ -73,17 +73,21 @@ EMSCRIPTEN_KEEPALIVE char *program_warnings(host::Program *program) {
 }
 
 /// The function starting at the address, decompiled following at most
-/// maxInstructions instructions (0 for Ghidra's default, 100,000), as JSON to
+/// maxInstructions instructions (0 for Ghidra's default, 100,000) for at most
+/// timeLimitMs milliseconds (0 for Ghidra's default, 30 seconds), as JSON to
 /// be freed with free(): {"address", "name", "lines"}, each line an array of
 /// tokens [text, kind, address, target] with kind an index into keyword,
 /// comment, type, function, variable, constant, syntax and address and target
 /// -1 when absent (host/src/markup.hh); or {"address", "error"}.
-EMSCRIPTEN_KEEPALIVE char *program_decompile(host::Program *program, double address, uint32_t maxInstructions) {
+EMSCRIPTEN_KEEPALIVE char *program_decompile(host::Program *program, double address, uint32_t maxInstructions,
+                                             uint32_t timeLimitMs) {
   uint64_t entry = (uint64_t)address;
   try {
-    return copyString(program->decompile(entry, maxInstructions == 0 ? host::Program::DEFAULT_MAX_INSTRUCTIONS
-                                                                     : maxInstructions)
-                          .json());
+    return copyString(
+        program
+            ->decompile(entry, maxInstructions == 0 ? host::Program::DEFAULT_MAX_INSTRUCTIONS : maxInstructions,
+                        timeLimitMs == 0 ? host::Program::DEFAULT_TIME_LIMIT_MS : timeLimitMs)
+            .json());
   } catch (const std::exception &error) {
     std::ostringstream json;
     json << "{\"address\":" << entry << ",\"error\":";

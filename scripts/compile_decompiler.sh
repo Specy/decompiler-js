@@ -5,8 +5,9 @@
 #   source ~/emsdk/emsdk_env.sh && scripts/compile_decompiler.sh [--clean]
 #
 # The vendored sources are copied to build/wasm/src and patches/*.patch are
-# applied there in name order, so ghidra/ stays upstream's. Both outputs are
-# committed; record the sha256 lines this prints in the commit message.
+# applied there (scripts/patched_sources.sh), so ghidra/ stays upstream's.
+# Both outputs are committed; record the sha256 lines this prints in the
+# commit message.
 set -euo pipefail
 
 repo_dir="$(cd "$(dirname "$0")/.." && pwd)"
@@ -16,22 +17,7 @@ build=build/wasm
 out=js/src/wasm
 jobs="$(nproc 2>/dev/null || echo 4)"
 
-# A change to the patches or to the compiler rebuilds everything: make cannot
-# tell that an object was compiled from a source a patch no longer touches.
-stamp="$(cat patches/*.patch 2>/dev/null | sha256sum | cut -d' ' -f1) $(emcc --version | head -n1)"
-if [ "${1:-}" = --clean ] || [ "$(cat "$build/stamp" 2>/dev/null)" != "$stamp" ]; then
-    rm -rf "$build"
-fi
-mkdir -p "$build"
-echo "$stamp" >"$build/stamp"
-
-# Unchanged files keep their times (cp -p), so make rebuilds only what a patch touched.
-rm -rf "$build/src"
-cp -Rp ghidra/decompile "$build/src"
-for patch in patches/*.patch; do
-    [ -e "$patch" ] || continue
-    patch --quiet --forward -p1 -d "$build/src" <"$patch"
-done
+scripts/patched_sources.sh "$build" emcc "${1:-}"
 
 # -fwasm-exceptions: C++ exceptions as WebAssembly exception handling, in
 # Emscripten's default encoding (WASM_LEGACY_EXCEPTIONS), which every current

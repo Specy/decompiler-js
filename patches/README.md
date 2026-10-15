@@ -1,9 +1,9 @@
 # Patches
 
 Changes to the vendored Ghidra sources (`../ghidra/decompile/`), applied by
-`scripts/compile_decompiler.sh` to a copy in `build/wasm/src`, in name order, with
-`patch -p1` from the `decompile/` directory (paths like `cpp/sleigh_arch.cc`). `ghidra/` itself
-stays exactly upstream's.
+`scripts/patched_sources.sh` to a copy in the build directory, in name order, with `patch -p1`
+from the `decompile/` directory (paths like `cpp/action.cc`). `ghidra/` itself stays exactly
+upstream's.
 
 Name each patch `NNNN-short-description.patch` and start it with a header saying why it is
 needed, before the first `---` line (`patch` ignores the header):
@@ -17,9 +17,17 @@ Upstream: <whether it was reported or could be, or why not>
 @@ ...
 ```
 
-The native reference build (`scripts/compile_native.sh`) does not apply them, so a patch that
-changes decompiler output shows up as a difference from `js/tests/fixtures/reference/`.
+Every build of the decompiler applies them: the wasm (`scripts/compile_decompiler.sh`) and the
+native driver and Ghidra's console (`scripts/compile_native.sh`). The SLEIGH compiler
+(`scripts/compile_specs.sh`) is built without them, so the processor descriptions stay
+upstream's. A patch must not change what the decompiler prints: the wasm is tested against
+the references in `js/tests/fixtures/reference/`, which were written before any patch, so a
+patch that changes the output fails those tests rather than passing unnoticed.
 
-There are none for Ghidra 12.1.4: its sources build with Emscripten unchanged. The
-specification files are read through `ifstream` and the `.ldefs` directory is scanned with
-`opendir`, both of which Emscripten's in-memory filesystem serves.
+| Patch | What it does |
+| --- | --- |
+| `0001-action-checkpoint.patch` | Adds `Action::checkpoint`, a hook called before each attempt to apply an action, null by default, which the host layer sets to enforce a decompilation's time limit (`host/src/program.cc`). |
+
+Ghidra 12.1.4 otherwise builds with Emscripten unchanged: the specification files are read
+through `ifstream` and the `.ldefs` directory is scanned with `opendir`, both of which
+Emscripten's in-memory filesystem serves.

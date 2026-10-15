@@ -1,5 +1,6 @@
 #include "program.hh"
 
+#include <chrono>
 #include <map>
 #include <set>
 #include <stdexcept>
@@ -114,6 +115,55 @@ std::string ghidraVersion() { return GHIDRA_VERSION; }
 
 namespace {
 
+using Clock = std::chrono::steady_clock;
+
+/// Thrown by checkDeadline once the decompilation under way has passed its
+/// deadline. It is a LowlevelError so that wherever Ghidra catches a failed
+/// step and carries on (a jump table it could not recover), it cleans up as
+/// for any other; the next action's checkpoint throws again, so the
+/// decompilation ends however often it is caught.
+struct TimeLimitError : public LowlevelError {
+  TimeLimitError() : LowlevelError("The time limit has passed") {}
+};
+
+/// The deadline of the decompilation under way, which Ghidra's actions check
+/// through Action::checkpoint (patches/0001-action-checkpoint.patch). The
+/// library runs one decompilation at a time.
+struct Deadline {
+  bool armed = false;
+  bool passed = false;
+  Clock::time_point end;
+};
+
+Deadline deadline;
+
+void checkDeadline(Funcdata &) {
+  if (!deadline.armed) return;
+  if (!deadline.passed && Clock::now() < deadline.end) return;
+  deadline.passed = true;
+  throw TimeLimitError();
+}
+
+/// Arms the deadline for one decompilation, and disarms it however that ends.
+struct ArmedDeadline {
+  explicit ArmedDeadline(uint32_t limitMs) {
+    Action::checkpoint = &checkDeadline;
+    deadline.passed = false;
+    deadline.end = Clock::now() + std::chrono::milliseconds(limitMs);
+    deadline.armed = true;
+  }
+  ~ArmedDeadline() { deadline.armed = false; }
+};
+
+/// "30 seconds", "1 second", "250 ms".
+std::string duration(uint32_t milliseconds) {
+  if (milliseconds % 1000 != 0) return std::to_string(milliseconds) + " ms";
+  return std::to_string(milliseconds / 1000) + (milliseconds == 1000 ? " second" : " seconds");
+}
+
+/// What FlowInfo throws past Architecture::max_instructions (flow.cc).
+const char *const TOO_MANY_INSTRUCTIONS = "Flow exceeded maximum allowable instructions";
+
 [[noreturn]] void rethrow() {
   try {
     throw;
@@ -164,11 +214,13 @@ std::vector<std::string> Program::warnings() const {
   return all;
 }
 
-DecompiledFunction Program::decompile(uint64_t address, uint32_t maxInstructions) {
+DecompiledFunction Program::decompile(uint64_t address, uint32_t maxInstructions, uint32_t timeLimitMs) {
+  Funcdata *function = nullptr;
+  deadline.passed = false;
   try {
     architecture->max_instructions = maxInstructions;
     Address entry(architecture->getDefaultCodeSpace(), address);
-    Funcdata *function = architecture->symboltab->getGlobalScope()->queryFunction(entry);
+    function = architecture->symboltab->getGlobalScope()->queryFunction(entry);
     if (function == nullptr) {
       std::ostringstream message;
       message << "No function starts at 0x" << std::hex << address;
@@ -177,13 +229,28 @@ DecompiledFunction Program::decompile(uint64_t address, uint32_t maxInstructions
     if (function->isProcStarted()) architecture->clearAnalysis(function);
     Action *action = architecture->allacts.getCurrent();
     action->reset(*function);
-    if (action->perform(*function) < 0 || !function->isProcComplete())
-      throw std::runtime_error("Decompilation of " + function->getName() + " did not complete");
-
+    {
+      ArmedDeadline armed(timeLimitMs);
+      if (action->perform(*function) < 0 || !function->isProcComplete())
+        throw std::runtime_error("Decompilation of " + function->getName() + " did not complete");
+    }
     return architecture->markup->print(function);
   } catch (const std::runtime_error &) {
     throw;
+  } catch (const LowlevelError &error) {
+    // A decompilation that failed is not kept: a long one holds much memory.
+    if (function != nullptr) architecture->clearAnalysis(function);
+    // Ghidra may have caught the TimeLimitError and thrown another error
+    // about the step it interrupted.
+    if (deadline.passed)
+      throw std::runtime_error(function->getName() + " took longer than " + duration(timeLimitMs) +
+                               " to decompile");
+    if (error.explain == TOO_MANY_INSTRUCTIONS)
+      throw std::runtime_error(function->getName() + " has more than " + std::to_string(maxInstructions) +
+                               " instructions");
+    throw std::runtime_error(error.explain);
   } catch (...) {
+    if (function != nullptr) architecture->clearAnalysis(function);
     rethrow();
   }
 }

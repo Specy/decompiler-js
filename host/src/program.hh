@@ -46,11 +46,18 @@ class Program {
   /// Ghidra's default for maxInstructions, DecompileOptions'
   /// SUGGESTED_MAX_INSTRUCTIONS and Architecture::max_instructions.
   static constexpr uint32_t DEFAULT_MAX_INSTRUCTIONS = 100000;
+  /// Ghidra's default for timeLimitMs, DecompileOptions' SUGGESTED_DECOMPILE_TIMEOUT_SECS.
+  static constexpr uint32_t DEFAULT_TIME_LIMIT_MS = 30000;
 
   /// The C for the function starting at the address, which must be one of
   /// the image's functions, as lines of linked tokens. The decompiler
-  /// follows at most maxInstructions instructions of it.
-  DecompiledFunction decompile(uint64_t address, uint32_t maxInstructions = DEFAULT_MAX_INSTRUCTIONS);
+  /// follows at most maxInstructions instructions of it ("main has more than
+  /// 100000 instructions") and gives up once it has worked for timeLimitMs
+  /// milliseconds ("main took longer than 30 seconds to decompile"), checking
+  /// the time before each pass of each of its actions
+  /// (patches/0001-action-checkpoint.patch).
+  DecompiledFunction decompile(uint64_t address, uint32_t maxInstructions = DEFAULT_MAX_INSTRUCTIONS,
+                               uint32_t timeLimitMs = DEFAULT_TIME_LIMIT_MS);
 
   /// What went wrong building the program without stopping it: each line
   /// Ghidra printed while building the architecture, then each declaration

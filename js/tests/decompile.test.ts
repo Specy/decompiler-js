@@ -208,7 +208,7 @@ test('gives up with an error past maxInstructions', async () => {
     const program = decompiler.openProgram(await fixtureImage('crackme'))
     try {
         const result = program.decompile(MAIN, { maxInstructions: 10 })
-        expect(result).toEqual({ address: MAIN, error: expect.stringMatching(/instructions/i) })
+        expect(result).toEqual({ address: MAIN, error: 'main has more than 10 instructions' })
         expect('text' in program.decompile(MAIN)).toBe(true)
     } finally {
         program.dispose()

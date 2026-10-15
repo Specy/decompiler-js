@@ -6,12 +6,14 @@
 #   scripts/compile_specs.sh
 #
 # The outputs are committed; record the sha256 lines this prints in the commit
-# message. The SLEIGH compiler builds into build/native (gitignored).
+# message. The SLEIGH compiler builds into build/sleigh (gitignored) from the
+# vendored sources as they are, without patches/: the processor descriptions
+# are upstream's.
 set -euo pipefail
 
 repo_dir="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$repo_dir"
-build=build/native
+build=build/sleigh
 jobs="$(nproc 2>/dev/null || echo 4)"
 
 # Per architecture: the specs/ directory, the vendored language directory, the

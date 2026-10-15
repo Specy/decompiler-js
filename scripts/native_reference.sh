@@ -7,8 +7,8 @@
 #
 #   scripts/native_reference.sh
 #
-# Each function is decompiled twice, natively and from the unpatched vendored
-# sources: by the host layer's driver (build/native/decompile, which reads the
+# Each function is decompiled twice, natively and from the vendored sources
+# with patches/ applied, as the wasm is built: by the host layer's driver (build/native/decompile, which reads the
 # ELF into a program image held in memory) and by Ghidra's console
 # (build/native/decomp_console) restoring the save file the driver writes of
 # that program: its bytes, core types, data-types and symbols, prototypes

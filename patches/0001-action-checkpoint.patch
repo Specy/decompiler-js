@@ -1,0 +1,50 @@
+Why: a decompilation that runs too long has to be stopped from inside the
+decompiler. Ghidra's Java side stops one by killing the decompiler process
+when its timeout (30 seconds by default) passes; a WebAssembly module runs
+on the one thread that called it, with no process to kill and no other
+thread to interrupt it, so the decompiler itself has to look at the time.
+This adds Action::checkpoint, a hook called before each attempt to apply an
+Action (every pass of every action and rule pool), null by default. The host
+layer sets it to a function that throws a LowlevelError once the call's
+deadline has passed (host/src/program.cc), which unwinds the decompilation
+like any other LowlevelError. Unset, as in Ghidra's own console, nothing
+changes. It cannot be done in host/: the action tree is built and run
+inside the library, and no virtual function is called often enough in every
+phase of it.
+Upstream: not reported; upstream has no use for it, since its Java side
+kills the process.
+
+--- a/cpp/action.hh
++++ b/cpp/action.hh
+@@ -100,6 +100,11 @@
+ #endif
+   virtual void printStatistics(ostream &s) const;		///< Dump statistics to stream
+   int4 perform(Funcdata &data); 				///< Perform this action (if necessary)
++  /// \brief A function called before each attempt to apply an Action, or null
++  ///
++  /// A host may set it to stop a decompilation that runs too long, by throwing a LowlevelError
++  /// once its deadline has passed. (decompiler-js patch, not upstream)
++  static void (*checkpoint)(Funcdata &data);
+   bool setBreakPoint(uint4 tp,const string &specify);		///< Set a breakpoint on this action
+   virtual void clearBreakPoints(void);				///< Clear all breakpoints set on \b this Action
+   bool setWarning(bool val,const string &specify);		///< Set a warning on this action
+--- a/cpp/action.cc
++++ b/cpp/action.cc
+@@ -20,6 +20,8 @@
+ 
+ namespace ghidra {
+ 
++void (*Action::checkpoint)(Funcdata &data) = (void (*)(Funcdata &))0;
++
+ /// Specify the name, group, and properties of the Action
+ /// \param f is the collection of property flags
+ /// \param nm is the Action name
+@@ -313,6 +315,8 @@
+     case status_repeat:
+       lcount = count;
+     case status_mid:
++      if (checkpoint != (void (*)(Funcdata &))0)
++	(*checkpoint)(data);
+ #ifdef OPACTION_DEBUG
+       data.debugActivate();
+ #endif

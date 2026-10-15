@@ -105,8 +105,15 @@ export type DecompiledFunction =
 
 export interface DecompileOptions {
     /** The most instructions the decompiler follows before giving up with an
-     * error; Ghidra's default is 100,000. */
+     * error ("main has more than 100000 instructions"); by default Ghidra's
+     * 100,000. */
     maxInstructions?: number
+    /** How long, in milliseconds, the decompiler works on the function before
+     * giving up with an error ("main took longer than 30 seconds to
+     * decompile"); by default Ghidra's 30,000. The decompiler looks at the
+     * time between the steps of its analysis, so it stops a little after the
+     * limit rather than on it. */
+    timeLimitMs?: number
 }
 
 export interface DecompiledProgram {
@@ -116,9 +123,11 @@ export interface DecompiledProgram {
      * `size_tt strlen(const char *s);`)"), and any message Ghidra printed. */
     readonly warnings: readonly string[]
     /** The C of the function starting at the address, one of the image's
-     * functions, or the reason there is none (no function starts there, or
-     * the decompiler failed). Throws only when the program was disposed or an
-     * argument is not a number it takes. */
+     * functions, or the reason there is none (no function starts there, it
+     * has more instructions than `maxInstructions`, it took longer than
+     * `timeLimitMs`, or the decompiler failed). Throws only when the program
+     * was disposed or an argument is not a number it takes. The call blocks
+     * the thread it runs on until it returns: run it in a worker. */
     decompile(address: number, options?: DecompileOptions): DecompiledFunction
     /** Frees the program's copy of the image and everything decompiled. */
     dispose(): void
@@ -166,6 +175,13 @@ const EXECUTABLE = 2
 const IMAGE_VERSION = 1
 
 const isAddress = (value: number) => Number.isSafeInteger(value) && value >= 0
+/** A positive whole number the wasm takes as an unsigned 32-bit integer. */
+const isCount = (value: number) => Number.isInteger(value) && value > 0 && value <= 0xffffffff
+
+// Ghidra's defaults (DecompileOptions: SUGGESTED_MAX_INSTRUCTIONS,
+// SUGGESTED_DECOMPILE_TIMEOUT_SECS).
+const DEFAULT_MAX_INSTRUCTIONS = 100_000
+const DEFAULT_TIME_LIMIT_MS = 30_000
 
 async function fetchBytes(url: URL): Promise<Uint8Array> {
     if (url.protocol === 'file:') {
@@ -233,10 +249,11 @@ export async function loadDecompiler(options: LoadDecompilerOptions): Promise<De
                 decompile(address, options) {
                     if (!open) throw new Error('The program was disposed')
                     if (!isAddress(address)) throw new RangeError(`Not an address: ${address}`)
-                    const maxInstructions = options?.maxInstructions ?? 0
-                    if (!Number.isInteger(maxInstructions) || maxInstructions < 0 || maxInstructions > 0xffffffff)
-                        throw new RangeError(`Not an instruction count: ${maxInstructions}`)
-                    const json = module._program_decompile(handle, address, maxInstructions)
+                    const maxInstructions = options?.maxInstructions ?? DEFAULT_MAX_INSTRUCTIONS
+                    if (!isCount(maxInstructions)) throw new RangeError(`Not an instruction count: ${maxInstructions}`)
+                    const timeLimitMs = options?.timeLimitMs ?? DEFAULT_TIME_LIMIT_MS
+                    if (!isCount(timeLimitMs)) throw new RangeError(`Not a time limit in milliseconds: ${timeLimitMs}`)
+                    const json = module._program_decompile(handle, address, maxInstructions, timeLimitMs)
                     try {
                         return decodeFunction(module.UTF8ToString(json))
                     } finally {

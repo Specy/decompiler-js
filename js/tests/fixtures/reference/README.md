@@ -9,8 +9,10 @@ must give alike. Ghidra's console prints plain text only, so the tokens are chec
 native driver, not against the console.
 
 Each `<fixture>-<function>.c` is the C printed for that function of `../elf/<fixture>` by the
-host layer's native driver (`build/native/decompile`, built from the unpatched vendored sources
-by `scripts/compile_native.sh`). The script checks it byte for byte against Ghidra's own console
+host layer's native driver (`build/native/decompile`, built from the vendored sources by
+`scripts/compile_native.sh`, with `patches/` applied as in the wasm; the references were first
+written before any patch existed, and none has changed them since). The script checks it byte
+for byte against Ghidra's own console
 (`decomp_console`, upstream's `consolemain.cc` built without its libbfd loader) given the same
 program: the driver writes it as a save file of Ghidra's `XmlArchitecture` (the bytes, the core
 types, the data-types and every symbol), and the console runs `restore`, `option readonly on`

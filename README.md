@@ -9,7 +9,7 @@ Work in progress. The caller describes a program (its memory, the names of its f
 | Path | What it holds |
 | --- | --- |
 | `ghidra/` | The subset of upstream Ghidra that is built, vendored unchanged from a release tag. See [ghidra/README.md](ghidra/README.md). |
-| `patches/` | Changes to the vendored sources, applied by the wasm build. None are needed today. |
+| `patches/` | Changes to the vendored sources, applied by every build of the decompiler. See [patches/README.md](patches/README.md). |
 | `host/` | The host layer: the C++ that feeds the decompiler a program image held in memory and returns its output (`src/`), its wasm exports (`wasm/`) and a native driver (`native/`). |
 | `specs/<architecture>/` | Compiled processor descriptions (`.sla`) and the specification files read beside them, committed. |
 | `js/` | The npm package `@specy/decompiler`: the TypeScript wrapper, the wasm and the tests. |

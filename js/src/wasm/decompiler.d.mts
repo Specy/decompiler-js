@@ -19,7 +19,7 @@ export interface DecompilerModule {
     _decompiler_add_specs(directory: number): number
     _program_open(image: number, size: number, languageId: number): number
     _program_warnings(program: number): number
-    _program_decompile(program: number, address: number, maxInstructions: number): number
+    _program_decompile(program: number, address: number, maxInstructions: number, timeLimitMs: number): number
     _program_close(program: number): void
 }
 

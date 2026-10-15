@@ -2,6 +2,7 @@
 // through the host layer, as the wasm build does, so the two can be compared.
 //
 //   decompile [--prototypes <file.h>] [--save <file.xml>] [--repeat <n>] [--json]
+//             [--max-instructions <n>] [--time-limit <ms>]
 //             <spec directory> <elf> <function name or 0xaddress>
 //
 // Prints the C to stdout, and the times and warnings to stderr. --json prints
@@ -10,6 +11,8 @@
 // of C declarations with the program image. --save also writes the
 // program as a save file of Ghidra's XmlArchitecture, which Ghidra's own
 // console (build/native/decomp_console) restores to cross-check this driver.
+// --max-instructions and --time-limit bound each decompilation as the wasm's
+// decompile options do, by default Ghidra's 100,000 and 30,000 ms.
 #include <chrono>
 #include <fstream>
 #include <iomanip>
@@ -41,6 +44,8 @@ int main(int argc, char **argv) {
   std::string savePath, prototypesPath;
   int repeat = 1;
   bool json = false;
+  uint32_t maxInstructions = host::Program::DEFAULT_MAX_INSTRUCTIONS;
+  uint32_t timeLimitMs = host::Program::DEFAULT_TIME_LIMIT_MS;
   int i = 1;
   for (; i < argc && argv[i][0] == '-'; ++i) {
     std::string option = argv[i];
@@ -49,11 +54,13 @@ int main(int argc, char **argv) {
     else if (option == "--save") savePath = argv[++i];
     else if (option == "--prototypes") prototypesPath = argv[++i];
     else if (option == "--repeat") repeat = std::stoi(argv[++i]);
+    else if (option == "--max-instructions") maxInstructions = (uint32_t)std::stoul(argv[++i]);
+    else if (option == "--time-limit") timeLimitMs = (uint32_t)std::stoul(argv[++i]);
     else break;
   }
   if (argc - i != 3) {
     std::cerr << "usage: decompile [--prototypes <file.h>] [--save <file.xml>] [--repeat <n>] [--json] "
-                 "<spec directory> <elf> <function name or 0xaddress>\n";
+                 "[--max-instructions <n>] [--time-limit <ms>] <spec directory> <elf> <function name or 0xaddress>\n";
     return 2;
   }
   std::string specDirectory = argv[i], elfPath = argv[i + 1], target = argv[i + 2];
@@ -90,7 +97,7 @@ int main(int argc, char **argv) {
     host::DecompiledFunction result;
     for (int run = 0; run < repeat; ++run) {
       auto decompileStart = std::chrono::steady_clock::now();
-      result = program.decompile(address);
+      result = program.decompile(address, maxInstructions, timeLimitMs);
       std::cerr << (run == 0 ? "first" : "again") << " decompile: " << std::fixed
                 << std::setprecision(1) << millisecondsSince(decompileStart) << " ms\n";
     }
