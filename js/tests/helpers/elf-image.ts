@@ -15,9 +15,22 @@ export interface FunctionName {
     name: string
 }
 
+export interface DataName {
+    address: number
+    name: string
+    size?: number
+}
+
+export interface StringRange {
+    address: number
+    length: number
+}
+
 export interface ElfImage {
     regions: Region[]
     functions: FunctionName[]
+    data: DataName[]
+    strings: StringRange[]
 }
 
 const PT_LOAD = 1
@@ -26,6 +39,7 @@ const PF_W = 2
 const SHT_SYMTAB = 2
 const SHT_RELA = 4
 const SHT_DYNSYM = 11
+const STT_OBJECT = 1
 const STT_FUNC = 2
 
 interface Section {
@@ -45,12 +59,18 @@ interface Symbol {
     binding: number
     shndx: number
     value: number
+    size: number
 }
 
 /** Regions: each PT_LOAD segment at its link-time address, its file bytes
  * followed by zeros up to its memory size. Functions: every defined STT_FUNC
  * symbol, GLOBAL before WEAK before LOCAL at a shared address, then each PLT
- * stub named after the symbol of the relocation filling its GOT slot. */
+ * stub named after the symbol of the relocation filling its GOT slot. Data:
+ * every defined STT_OBJECT symbol without its version (`stdin`), with its
+ * size, in the same order, then the strings of `.rodata` (each NUL-terminated
+ * run of printable bytes) that have a word in them, named `s_` and their
+ * first 24 characters as a word, as the editor's Listing names them.
+ * Strings: those runs, their NUL included. */
 export function readElfImage(file: Uint8Array): ElfImage {
     const view = new DataView(file.buffer, file.byteOffset, file.byteLength)
     const u8 = (at: number) => view.getUint8(at)
@@ -125,7 +145,8 @@ export function readElfImage(file: Uint8Array): ElfImage {
                 type: info & 0xf,
                 binding: info >> 4,
                 shndx: u16(at + 6),
-                value: u64(at + 8)
+                value: u64(at + 8),
+                size: u64(at + 16)
             })
         }
         return symbols
@@ -135,15 +156,24 @@ export function readElfImage(file: Uint8Array): ElfImage {
 
     const bindingRank = (binding: number) => (binding === 1 ? 0 : binding === 2 ? 1 : binding === 0 ? 2 : 3)
     const candidates: { rank: number; order: number; function: FunctionName }[] = []
+    const objects: { rank: number; order: number; data: DataName }[] = []
     for (const section of sections) {
         if (!isSymbolTable(section)) continue
         for (const symbol of readSymbols(section)) {
-            if (symbol.type !== STT_FUNC || symbol.shndx === 0 || symbol.value === 0 || !symbol.name) continue
-            candidates.push({
-                rank: bindingRank(symbol.binding),
-                order: candidates.length,
-                function: { address: symbol.value, name: symbol.name }
-            })
+            if (symbol.shndx === 0 || symbol.value === 0 || !symbol.name) continue
+            if (symbol.type === STT_FUNC) {
+                candidates.push({
+                    rank: bindingRank(symbol.binding),
+                    order: candidates.length,
+                    function: { address: symbol.value, name: symbol.name }
+                })
+            } else if (symbol.type === STT_OBJECT) {
+                objects.push({
+                    rank: bindingRank(symbol.binding),
+                    order: objects.length,
+                    data: { address: symbol.value, name: symbol.name.split('@')[0], size: symbol.size }
+                })
+            }
         }
     }
     candidates.sort((a, b) => a.rank - b.rank || a.order - b.order)
@@ -176,5 +206,34 @@ export function readElfImage(file: Uint8Array): ElfImage {
         }
     }
 
-    return { regions, functions }
+    objects.sort((a, b) => a.rank - b.rank || a.order - b.order)
+    const data = objects.map((object) => object.data)
+    const strings: StringRange[] = []
+    const taken = new Set(data.map((entry) => entry.name))
+    const printable = (byte: number) => (byte >= 0x20 && byte < 0x7f) || byte === 9 || byte === 10 || byte === 13
+    for (const section of sections) {
+        if (section.name !== '.rodata') continue
+        let start = -1
+        for (let i = 0; i < section.size; i++) {
+            const byte = file[section.offset + i]
+            if (byte === 0 && start >= 0) {
+                const text = new TextDecoder().decode(file.subarray(section.offset + start, section.offset + i))
+                strings.push({ address: section.address + start, length: i + 1 - start })
+                const word = text
+                    .slice(0, 24)
+                    .replace(/[^A-Za-z0-9]+/g, '_')
+                    .replace(/^_+|_+$/g, '')
+                if (word) {
+                    let name = `s_${word}`
+                    for (let n = 2; taken.has(name); n++) name = `s_${word}_${n}`
+                    taken.add(name)
+                    data.push({ address: section.address + start, name, size: i + 1 - start })
+                }
+            }
+            if (byte === 0 || !printable(byte)) start = -1
+            else if (start < 0) start = i
+        }
+    }
+
+    return { regions, functions, data, strings }
 }

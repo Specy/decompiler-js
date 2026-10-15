@@ -1,34 +1,34 @@
 
-xunknown8 main(void)
+undefined8 main(void)
 
 {
-  int4 iVar1;
-  int8 iVar2;
-  xunknown8 xVar3;
-  int8 in_FS_OFFSET;
-  xunknown1 axStack_98 [136];
-  int8 iStack_10;
+  int iVar1;
+  long lVar2;
+  undefined8 uVar3;
+  long in_FS_OFFSET;
+  undefined1 auStack_98 [136];
+  long lStack_10;
   
-  iStack_10 = *(int8 *)(in_FS_OFFSET + 0x28);
-  printf(0x2004);
-  iVar2 = fgets(axStack_98,0x80,xRam0000000000004010);
-  if (iVar2 == 0) {
-    xVar3 = 1;
+  lStack_10 = *(long *)(in_FS_OFFSET + 0x28);
+  printf("Enter password: ");
+  lVar2 = fgets(auStack_98,0x80,stdin);
+  if (lVar2 == 0) {
+    uVar3 = 1;
   }
   else {
-    iVar2 = strcspn(axStack_98,0x2015);
-    axStack_98[iVar2] = 0;
-    iVar1 = strcmp(axStack_98,0x2017);
+    lVar2 = strcspn(auStack_98,0x2015);
+    auStack_98[lVar2] = 0;
+    iVar1 = strcmp(auStack_98,"hunter2");
     if (iVar1 == 0) {
-      puts(0x201f);
+      puts("Correct!");
     }
     else {
-      puts(0x2028);
+      puts("Wrong!");
     }
-    xVar3 = 0;
+    uVar3 = 0;
   }
-  if (iStack_10 != *(int8 *)(in_FS_OFFSET + 0x28)) {
-    xVar3 = __stack_chk_fail();
+  if (lStack_10 != *(long *)(in_FS_OFFSET + 0x28)) {
+    uVar3 = __stack_chk_fail();
   }
-  return xVar3;
+  return uVar3;
 }

@@ -1,7 +1,9 @@
 #include "elf_image.hh"
 
 #include <algorithm>
+#include <cctype>
 #include <map>
+#include <set>
 #include <stdexcept>
 #include <string>
 
@@ -15,6 +17,7 @@ constexpr uint32_t PF_W = 2;
 constexpr uint32_t SHT_SYMTAB = 2;
 constexpr uint32_t SHT_RELA = 4;
 constexpr uint32_t SHT_DYNSYM = 11;
+constexpr uint8_t STT_OBJECT = 1;
 constexpr uint8_t STT_FUNC = 2;
 constexpr uint8_t STB_LOCAL = 0;
 constexpr uint8_t STB_GLOBAL = 1;
@@ -58,7 +61,7 @@ struct Symbol {
   std::string name;
   uint8_t type, binding;
   uint16_t shndx;
-  uint64_t value;
+  uint64_t value, size;
 };
 
 std::vector<Symbol> readSymbols(const Reader &in, const std::vector<Section> &sections,
@@ -74,6 +77,7 @@ std::vector<Symbol> readSymbols(const Reader &in, const std::vector<Section> &se
     symbol.binding = info >> 4;
     symbol.shndx = in.u16(at + 6);
     symbol.value = in.u64(at + 8);
+    symbol.size = in.u64(at + 16);
     symbol.name = name < strings.size ? in.cstring(strings.offset + name) : std::string();
     symbols.push_back(symbol);
   }
@@ -85,6 +89,27 @@ int bindingRank(uint8_t binding) {
   if (binding == STB_WEAK) return 1;
   if (binding == STB_LOCAL) return 2;
   return 3;
+}
+
+/// A symbol's name without its version: "stdin@GLIBC_2.2.5" is "stdin".
+std::string unversioned(const std::string &name) { return name.substr(0, name.find('@')); }
+
+bool printable(uint8_t byte) { return (byte >= 0x20 && byte < 0x7f) || byte == '\t' || byte == '\n' || byte == '\r'; }
+
+/// The editor's Listing names a string "s_" and its first 24 characters as a word.
+std::string stringLabel(const std::string &text) {
+  std::string word;
+  bool gap = false;
+  for (char c : text.substr(0, 24)) {
+    if (std::isalnum((unsigned char)c)) {
+      if (gap && !word.empty()) word += '_';
+      word += c;
+      gap = false;
+    } else {
+      gap = true;
+    }
+  }
+  return word.empty() ? std::string() : "s_" + word;
 }
 
 }  // namespace
@@ -146,15 +171,23 @@ ProgramImage readElfImage(const std::vector<uint8_t> &file) {
     FunctionName function;
   };
   std::vector<Candidate> candidates;
+  struct DataCandidate {
+    int rank;
+    size_t order;
+    DataName data;
+  };
+  std::vector<DataCandidate> objects;
   std::map<uint64_t, std::string> slotNames;  // GOT slot -> imported symbol
   for (const Section &section : sections) {
     if (section.type != SHT_SYMTAB && section.type != SHT_DYNSYM) continue;
     for (const Symbol &symbol : readSymbols(in, sections, section)) {
-      if (symbol.type != STT_FUNC || symbol.shndx == 0 || symbol.value == 0 ||
-          symbol.name.empty())
-        continue;
-      candidates.push_back({bindingRank(symbol.binding), candidates.size(),
-                            {symbol.value, symbol.name}});
+      if (symbol.shndx == 0 || symbol.value == 0 || symbol.name.empty()) continue;
+      if (symbol.type == STT_FUNC)
+        candidates.push_back({bindingRank(symbol.binding), candidates.size(),
+                              {symbol.value, symbol.name}});
+      else if (symbol.type == STT_OBJECT)
+        objects.push_back({bindingRank(symbol.binding), objects.size(),
+                           {symbol.value, unversioned(symbol.name), symbol.size}});
     }
   }
   for (const Section &section : sections) {
@@ -190,6 +223,45 @@ ProgramImage readElfImage(const std::vector<uint8_t> &file) {
       uint64_t next = section.address + stub + i + 6;
       auto slot = slotNames.find(next + (int64_t)displacement);
       if (slot != slotNames.end()) image.functions.push_back({section.address + stub, slot->second});
+    }
+  }
+
+  // Data: the objects, best binding first at each address, then the strings
+  // of .rodata (NUL-terminated runs of printable bytes, their NUL included),
+  // each named as the editor's Listing names one when it has a word in it.
+  std::stable_sort(objects.begin(), objects.end(), [](const DataCandidate &a, const DataCandidate &b) {
+    if (a.rank != b.rank) return a.rank < b.rank;
+    return a.order < b.order;
+  });
+  std::set<std::string> taken;
+  for (DataCandidate &object : objects) {
+    taken.insert(object.data.name);
+    image.data.push_back(std::move(object.data));
+  }
+  for (const Section &section : sections) {
+    if (section.name != ".rodata") continue;
+    in.need(section.offset, section.size);
+    uint64_t start = 0;
+    bool inRun = false;
+    for (uint64_t i = 0; i < section.size; ++i) {
+      uint8_t byte = file[section.offset + i];
+      if (byte == 0 && inRun) {
+        std::string text(file.begin() + section.offset + start, file.begin() + section.offset + i);
+        image.strings.push_back({section.address + start, i + 1 - start});
+        std::string name = stringLabel(text);
+        if (!name.empty()) {
+          std::string unique = name;
+          for (int n = 2; taken.count(unique) != 0; ++n) unique = name + "_" + std::to_string(n);
+          taken.insert(unique);
+          image.data.push_back({section.address + start, unique, i + 1 - start});
+        }
+      }
+      if (byte == 0 || !printable(byte)) {
+        inRun = false;
+      } else if (!inRun) {
+        inRun = true;
+        start = i;
+      }
     }
   }
 

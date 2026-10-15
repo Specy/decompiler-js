@@ -1,8 +1,8 @@
 // Ghidra's decompiler in WebAssembly. The caller describes a program (its
-// memory and its function names) and asks for a function's C.
+// memory, the names of its functions and data, where its strings are) and
+// asks for a function's C.
 //
-// This is the first, plain-text form of the API: types, data names, strings,
-// prototypes and the token-to-address markup are still to come.
+// Still to come: prototypes and the token-to-address markup.
 import createDecompilerModule from './wasm/decompiler.mjs'
 import type { DecompilerModule } from './wasm/decompiler.mjs'
 
@@ -32,9 +32,28 @@ export interface ProgramFunction {
     name: string
 }
 
+/** A named object (a global variable, a table, a string's label) and its
+ * length in bytes when known. At an address named twice, the first name
+ * given is kept; a function's name wins over a data name at its address. */
+export interface ProgramData {
+    address: number
+    name: string
+    size?: number
+}
+
+/** A string of `length` bytes, its terminator included if it has one. A
+ * string named by a `data` entry at its address is typed as a char array;
+ * one without a name is left alone. */
+export interface ProgramString {
+    address: number
+    length: number
+}
+
 export interface ProgramImage {
     regions: ProgramRegion[]
     functions: ProgramFunction[]
+    data?: ProgramData[]
+    strings?: ProgramString[]
 }
 
 export type DecompiledFunction = { address: number; text: string } | { address: number; error: string }
@@ -78,6 +97,7 @@ const architectures: Record<Architecture, ArchitectureFiles> = {
 
 const READ_ONLY = 1
 const EXECUTABLE = 2
+const IMAGE_VERSION = 1
 
 async function fetchBytes(url: URL): Promise<Uint8Array> {
     if (url.protocol === 'file:') {
@@ -162,30 +182,75 @@ export async function loadDecompiler(options: LoadDecompilerOptions): Promise<De
     }
 }
 
-function buildProgram(module: DecompilerModule, image: ProgramImage, language: string): number {
-    const handle = module._image_new()
-    try {
-        for (const region of image.regions) {
-            const pointer = module._malloc(Math.max(region.bytes.length, 1))
-            try {
-                module.HEAPU8.set(region.bytes, pointer)
-                const flags = (region.readOnly ? READ_ONLY : 0) | (region.executable ? EXECUTABLE : 0)
-                module._image_add_region(handle, region.address, pointer, region.bytes.length, flags)
-            } finally {
-                module._free(pointer)
-            }
-        }
-        for (const fn of image.functions) {
-            withString(module, fn.name, (pointer) => module._image_add_function(handle, fn.address, pointer))
-        }
-    } catch (error) {
-        module._image_delete(handle)
-        throw error
+/** The image in the binary form host/src/program_image.hh describes. */
+function encodeImage(image: ProgramImage): Uint8Array {
+    const utf8 = new TextEncoder()
+    const functions = image.functions.map((fn) => ({ address: fn.address, name: utf8.encode(fn.name) }))
+    const data = (image.data ?? []).map((entry) => ({ ...entry, name: utf8.encode(entry.name) }))
+    const strings = image.strings ?? []
+    let size = 8 + 16
+    for (const region of image.regions) size += 16 + region.bytes.length
+    for (const fn of functions) size += 12 + fn.name.length
+    for (const entry of data) size += 20 + entry.name.length
+    size += 16 * strings.length
+
+    const bytes = new Uint8Array(size)
+    const view = new DataView(bytes.buffer)
+    let at = 0
+    const u32 = (value: number) => {
+        view.setUint32(at, value, true)
+        at += 4
     }
-    // program_open takes the image over, whether or not it succeeds.
-    const program = withString(module, language, (pointer) => module._program_open(handle, pointer))
-    if (program === 0) throw new Error(lastError(module))
-    return program
+    const u64 = (value: number) => {
+        if (!Number.isSafeInteger(value) || value < 0) throw new RangeError(`Not an address or size: ${value}`)
+        view.setBigUint64(at, BigInt(value), true)
+        at += 8
+    }
+    const raw = (chunk: Uint8Array) => {
+        bytes.set(chunk, at)
+        at += chunk.length
+    }
+    raw(utf8.encode('DIMG'))
+    u32(IMAGE_VERSION)
+    u32(image.regions.length)
+    for (const region of image.regions) {
+        u64(region.address)
+        u32((region.readOnly ? READ_ONLY : 0) | (region.executable ? EXECUTABLE : 0))
+        u32(region.bytes.length)
+        raw(region.bytes)
+    }
+    u32(functions.length)
+    for (const fn of functions) {
+        u64(fn.address)
+        u32(fn.name.length)
+        raw(fn.name)
+    }
+    u32(data.length)
+    for (const entry of data) {
+        u64(entry.address)
+        u64(entry.size ?? 0)
+        u32(entry.name.length)
+        raw(entry.name)
+    }
+    u32(strings.length)
+    for (const string of strings) {
+        u64(string.address)
+        u64(string.length)
+    }
+    return bytes
+}
+
+function buildProgram(module: DecompilerModule, image: ProgramImage, language: string): number {
+    const bytes = encodeImage(image)
+    const pointer = module._malloc(Math.max(bytes.length, 1))
+    try {
+        module.HEAPU8.set(bytes, pointer)
+        const program = withString(module, language, (name) => module._program_open(pointer, bytes.length, name))
+        if (program === 0) throw new Error(lastError(module))
+        return program
+    } finally {
+        module._free(pointer)
+    }
 }
 
 function withString<T>(module: DecompilerModule, text: string, use: (pointer: number) => T): T {

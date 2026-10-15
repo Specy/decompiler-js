@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <ostream>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -24,8 +25,11 @@ std::string ghidraVersion();
 
 class HostArchitecture;
 
-/// One program image under a SleighArchitecture. Errors from Ghidra surface
-/// as std::runtime_error carrying Ghidra's explanation.
+/// One program image under a SleighArchitecture configured as Ghidra's Java
+/// side configures its decompiler process: Ghidra's names for the core types,
+/// read-only memory propagating as constants, the image's functions and data
+/// as named symbols and its strings as character arrays. Errors from Ghidra
+/// surface as std::runtime_error carrying Ghidra's explanation.
 class Program {
   std::ostringstream messages;
   std::unique_ptr<HostArchitecture> architecture;
@@ -42,6 +46,12 @@ class Program {
 
   /// Messages Ghidra printed while building the architecture.
   std::string warnings() const { return messages.str(); }
+
+  /// Writes the program as a save file of Ghidra's XmlArchitecture: the
+  /// regions, the core types, the data-types and the symbols, which the
+  /// decompiler's own console loads with `restore`, to check this layer
+  /// against it.
+  void writeSaveFile(std::ostream &out) const;
 };
 
 }  // namespace host

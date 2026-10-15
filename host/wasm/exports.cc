@@ -48,33 +48,12 @@ EMSCRIPTEN_KEEPALIVE int decompiler_add_specs(const char *directory) {
   }
 }
 
-EMSCRIPTEN_KEEPALIVE host::ProgramImage *image_new() { return new host::ProgramImage(); }
-
-EMSCRIPTEN_KEEPALIVE void image_delete(host::ProgramImage *image) { delete image; }
-
-/// flags: 1 read-only, 2 executable.
-EMSCRIPTEN_KEEPALIVE void image_add_region(host::ProgramImage *image, double address,
-                                           const uint8_t *bytes, uint32_t length, int flags) {
-  host::Region region;
-  region.address = (uint64_t)address;
-  region.bytes.assign(bytes, bytes + length);
-  region.readOnly = (flags & 1) != 0;
-  region.executable = (flags & 2) != 0;
-  image->regions.push_back(std::move(region));
-}
-
-EMSCRIPTEN_KEEPALIVE void image_add_function(host::ProgramImage *image, double address,
-                                             const char *name) {
-  image->functions.push_back({(uint64_t)address, name});
-}
-
-/// Builds the architecture for the image, which it takes over: the image is
-/// freed whether or not this succeeds.
-EMSCRIPTEN_KEEPALIVE host::Program *program_open(host::ProgramImage *image, const char *languageId) {
-  host::ProgramImage taken = std::move(*image);
-  delete image;
+/// Builds the architecture for a program image in the binary form
+/// readProgramImage reads (host/src/program_image.hh).
+EMSCRIPTEN_KEEPALIVE host::Program *program_open(const uint8_t *image, uint32_t size,
+                                                 const char *languageId) {
   try {
-    return new host::Program(std::move(taken), languageId);
+    return new host::Program(host::readProgramImage(image, size), languageId);
   } catch (const std::exception &error) {
     fail(error);
     return nullptr;

@@ -8,8 +8,10 @@
 # Each function is decompiled twice, natively and from the unpatched vendored
 # sources: by the host layer's driver (build/native/decompile, which reads the
 # ELF into a program image held in memory) and by Ghidra's console
-# (build/native/decomp_console) loading that image as an XML load image the
-# driver writes. The two must print the same C.
+# (build/native/decomp_console) restoring the save file the driver writes of
+# that program: its bytes, core types, data-types and symbols. The console
+# then gets the one option the host layer sets (readonly on). The two must
+# print the same C.
 set -euo pipefail
 
 repo_dir="$(cd "$(dirname "$0")/.." && pwd)"
@@ -26,9 +28,9 @@ trap 'rm -rf "$work"' EXIT
 for entry in "${references[@]}"; do
     read -r fixture function <<<"$entry"
     out="$fixtures/reference/$fixture-$function.c"
-    build/native/decompile --xml "$work/image.xml" specs/x86-64 "$fixtures/elf/$fixture" "$function" \
+    build/native/decompile --save "$work/save.xml" specs/x86-64 "$fixtures/elf/$fixture" "$function" \
         >"$work/driver.c"
-    printf 'load file %s\nload function %s\ndecompile\nprint C\nquit\n' "$work/image.xml" "$function" |
+    printf 'restore %s\noption readonly on\nload function %s\ndecompile\nprint C\nquit\n' "$work/save.xml" "$function" |
         SLEIGHHOME="$repo_dir/specs/x86-64" build/native/decomp_console >"$work/console.txt"
     # The C is what the console prints between the prompts of `print C` and `quit`.
     sed -n '/^\[decomp\]> print C$/,/^\[decomp\]> quit$/p' "$work/console.txt" | sed '1d;$d' >"$work/console.c"

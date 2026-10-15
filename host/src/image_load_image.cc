@@ -1,6 +1,7 @@
 #include "image_load_image.hh"
 
 #include <algorithm>
+#include <iomanip>
 #include <sstream>
 
 namespace host {
@@ -59,6 +60,36 @@ void ImageLoadImage::getReadonly(RangeList &list) const {
 
 void ImageLoadImage::adjustVma(long) {
   throw LowlevelError("A program image is placed at its own addresses and cannot be moved");
+}
+
+namespace {
+
+void writeChunk(std::ostream &out, const std::string &space, uint64_t address, const uint8_t *bytes,
+                size_t size, bool readOnly) {
+  out << "<bytechunk space=\"" << space << "\" offset=\"0x" << std::hex << address << "\""
+      << (readOnly ? " readonly=\"true\"" : "") << ">\n";
+  for (size_t i = 0; i < size; ++i) {
+    out << std::setw(2) << std::setfill('0') << (int)bytes[i];
+    if (i % 32 == 31 || i + 1 == size) out << '\n';
+  }
+  out << "</bytechunk>\n" << std::dec;
+}
+
+}  // namespace
+
+void ImageLoadImage::writeXml(std::ostream &out) const {
+  std::string spaceName = space != nullptr ? space->getName() : "ram";
+  out << "<binaryimage arch=\"" << archType << "\">\n";
+  const std::vector<uint8_t> zeros(16, 0);
+  for (size_t i = 0; i < image.regions.size(); ++i) {
+    const Region &region = image.regions[i];
+    writeChunk(out, spaceName, region.address, region.bytes.data(), region.bytes.size(), region.readOnly);
+    uint64_t end = region.address + region.bytes.size();
+    uint64_t padding = 16;
+    if (i + 1 < image.regions.size()) padding = std::min<uint64_t>(16, image.regions[i + 1].address - end);
+    if (padding > 0) writeChunk(out, spaceName, end, zeros.data(), padding, false);
+  }
+  out << "</binaryimage>\n";
 }
 
 }  // namespace host

@@ -16,11 +16,7 @@ export interface DecompilerModule {
     _decompiler_version(): number
     _decompiler_error(): number
     _decompiler_add_specs(directory: number): number
-    _image_new(): number
-    _image_delete(image: number): void
-    _image_add_region(image: number, address: number, bytes: number, length: number, flags: number): void
-    _image_add_function(image: number, address: number, name: number): void
-    _program_open(image: number, languageId: number): number
+    _program_open(image: number, size: number, languageId: number): number
     _program_decompile(program: number, address: number): number
     _program_close(program: number): void
 }

@@ -7,13 +7,17 @@ Each `<fixture>-<function>.c` is the C printed for that function of `../elf/<fix
 host layer's native driver (`build/native/decompile`, built from the unpatched vendored sources
 by `scripts/compile_native.sh`). The script checks it byte for byte against Ghidra's own console
 (`decomp_console`, upstream's `consolemain.cc` built without its libbfd loader) given the same
-program image as an XML load image: `load file`, `load function <name>`, `decompile`, `print C`.
+program: the driver writes it as a save file of Ghidra's `XmlArchitecture` (the bytes, the core
+types, the data-types and every symbol), and the console runs `restore`, `option readonly on`
+(the one option the host layer sets), `load function <name>`, `decompile`, `print C`.
 
-The program image is what the driver reads from the ELF: each `PT_LOAD` segment at its link-time
-address (read-only unless writable), and as function names every defined `STT_FUNC` symbol
-plus the PLT stubs named after their relocations' symbols. No prototypes, data names, strings or
-Ghidra's display names for its core types are given yet, so types print as Ghidra's raw core
-types (`xunknown8`, `int4`) and string arguments as addresses (`puts(0x201f)`).
+The program image is what the driver reads from the ELF (`host/native/elf_image.cc`, mirrored by
+`../../helpers/elf-image.ts`): each `PT_LOAD` segment at its link-time address (read-only unless
+writable); as function names every defined `STT_FUNC` symbol plus the PLT stubs named after
+their relocations' symbols; as data every defined `STT_OBJECT` symbol, without its version, and
+the strings of `.rodata` named `s_` and their first words, as the editor's Listing names them.
+Types print with Ghidra's names (`undefined8`, `long`). No prototypes are given yet, so calls
+return `long`.
 
 | File | Produced with |
 | --- | --- |
