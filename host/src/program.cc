@@ -40,7 +40,14 @@ class HostArchitecture : public SleighArchitecture {
 };
 
 void startLibrary(const std::vector<std::string> &specDirectories) {
-  startDecompilerLibrary(specDirectories);
+  static bool started = false;
+  if (!started) {
+    startDecompilerLibrary(specDirectories);
+    started = true;
+    return;
+  }
+  for (const std::string &directory : specDirectories)
+    SleighArchitecture::specpaths.addDir2Path(directory);
 }
 
 std::string ghidraVersion() { return GHIDRA_VERSION; }

@@ -13,10 +13,10 @@
 
 namespace host {
 
-/// Starts Ghidra's decompiler library and adds the directories holding
-/// .ldefs files and the specification files they name. Call it once, before
-/// the first Program. Ghidra reads the directories when the first Program is
-/// built, so every directory must be filled by then.
+/// Starts Ghidra's decompiler library on the first call, and adds the
+/// directories holding .ldefs files and the specification files they name.
+/// Ghidra reads the .ldefs files when the first Program is built and never
+/// again, so every directory must be added and filled by then.
 void startLibrary(const std::vector<std::string> &specDirectories);
 
 /// The Ghidra release the library was built from, e.g. "Ghidra_12.1.4_build 8b6bbb857acc".
