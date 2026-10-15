@@ -63,8 +63,9 @@ export interface ProgramImage {
      * and the types of data by name (`extern FILE *stdin;`). `_Noreturn`,
      * `[[noreturn]]` or `__attribute__((noreturn))` marks a function that does
      * not return. A declaration that cannot be read is skipped and reported in
-     * the program's `warnings`. The package's `prototypes/glibc.h` declares
-     * glibc's.
+     * the program's `warnings`. The package declares the glibc functions
+     * programs commonly call in `@specy/decompiler/prototypes/glibc.h`, whose
+     * text `@specy/decompiler/prototypes/glibc` exports as a string.
      */
     prototypes: string
 }

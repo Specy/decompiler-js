@@ -33,7 +33,10 @@ namespace host {
 /// type of their size, as the data organization gives it (`ulong`,
 /// `longlong`, `longdouble`), and `_Bool` becomes `bool`; and a struct or
 /// union referred to by its tag (`typedef struct _IO_FILE FILE;`) is referred
-/// to by its name, created incomplete if it is not defined yet. CParse cannot
+/// to by its name, created incomplete if it is not defined yet; and a
+/// function named after one of the compiler specification's calling
+/// conventions (`syscall`), which CParse reads as the convention, is read
+/// under a stand-in name and applied under its own. CParse cannot
 /// define a struct or union already referred to: define it first. Nor does
 /// it read an empty parameter list (write `(void)`) or an array without a
 /// size.

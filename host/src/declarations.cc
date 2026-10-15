@@ -219,6 +219,25 @@ void nameTags(std::vector<Token> &tokens, TypeFactory &types) {
   tokens = std::move(named);
 }
 
+/// What a function named after a calling convention is called while CParse
+/// reads its declaration.
+const char *const STAND_IN = "__decompiler_stand_in";
+
+/// Replaces the name of a function declared with the name of one of the
+/// compiler specification's calling conventions (x86-64's `syscall`), which
+/// CParse reads as the convention, with STAND_IN, returning the name; or
+/// returns "" when the declaration declares no such function. A convention's
+/// name followed by '(' can only be the name of the function declared.
+std::string standInForConvention(std::vector<Token> &tokens, const Architecture &architecture) {
+  for (size_t i = 0; i + 1 < tokens.size(); ++i) {
+    if (tokens[i + 1].text != "(" || !architecture.hasModel(tokens[i].text)) continue;
+    std::string name = tokens[i].text;
+    tokens[i].text = STAND_IN;
+    return name;
+  }
+  return "";
+}
+
 /// The tokens as CParse reads them. A line break goes only after ';', '{' or
 /// ',' (keeping lines within CParse's buffer): CParse's lexer fails on an
 /// identifier that ends a line.
@@ -270,9 +289,11 @@ std::vector<Symbol *> symbolsNamed(Architecture &architecture, const std::string
 }
 
 /// Applies one parsed declarator; returns a message when it cannot be.
-std::string apply(Architecture &architecture, TypeDeclarator *declarator, bool noreturn) {
+/// standIn is the name STAND_IN stands for, if any.
+std::string apply(Architecture &architecture, TypeDeclarator *declarator, bool noreturn, const std::string &standIn) {
   if (!declarator->isValid()) return "Not a valid declaration";
-  const std::string &name = declarator->getIdentifier();
+  const std::string &name =
+      !standIn.empty() && declarator->getIdentifier() == STAND_IN ? standIn : declarator->getIdentifier();
   if (declarator->hasProperty(CParse::f_typedef)) {
     Datatype *type = declarator->buildType(&architecture);
     if (name.empty()) return "Missing identifier for typedef";
@@ -319,6 +340,7 @@ std::vector<std::string> applyDeclarations(Architecture &architecture, const Dat
       bool noreturn = removeAttributes(declaration.tokens);
       nameTypes(declaration.tokens, *architecture.types, organization);
       nameTags(declaration.tokens, *architecture.types);
+      std::string standIn = standInForConvention(declaration.tokens, architecture);
       if (declaration.tokens.empty()) continue;
       std::istringstream text(join(declaration.tokens) + " ;");
       CParse parser(&architecture, 4096);
@@ -332,7 +354,7 @@ std::vector<std::string> applyDeclarations(Architecture &architecture, const Dat
         if (declarators == nullptr || declarators->empty()) problem = "Not a declaration";
         else
           for (TypeDeclarator *declarator : *declarators) {
-            problem = apply(architecture, declarator, noreturn);
+            problem = apply(architecture, declarator, noreturn, standIn);
             if (!problem.empty()) break;
           }
       }

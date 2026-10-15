@@ -1,6 +1,6 @@
 // Copies into dist/ what tsdown does not bundle: the Emscripten module and its
 // wasm, the compiled processor descriptions, the prototypes and the licences.
-import { cp, mkdir, stat } from 'node:fs/promises'
+import { cp, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -37,3 +37,15 @@ for (const [from, to] of copies) {
         errorOnExist: false
     })
 }
+
+// The prototypes as a JavaScript string too, for bundlers that do not import
+// a .h file's text: `import glibc from '@specy/decompiler/prototypes/glibc'`.
+const glibc = await readFile(resolve(root, 'prototypes/glibc.h'), 'utf8')
+await writeFile(
+    resolve(root, 'dist/prototypes/glibc.mjs'),
+    `// prototypes/glibc.h as a string, written by scripts/copy-assets.mjs.\nexport default ${JSON.stringify(glibc)}\n`
+)
+await writeFile(
+    resolve(root, 'dist/prototypes/glibc.d.mts'),
+    '/** The text of prototypes/glibc.h, C declarations of the glibc functions programs commonly call. */\ndeclare const glibc: string\nexport default glibc\n'
+)

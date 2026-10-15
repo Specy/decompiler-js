@@ -17,6 +17,11 @@
             "default": "./dist/index.mjs"
         },
         "./prototypes/glibc.h": "./dist/prototypes/glibc.h",
+        "./prototypes/glibc": {
+            "types": "./dist/prototypes/glibc.d.mts",
+            "import": "./dist/prototypes/glibc.mjs",
+            "default": "./dist/prototypes/glibc.mjs"
+        },
         "./package.json": "./package.json"
     },
     "files": ["dist"],

@@ -19,11 +19,15 @@ if (!existsSync(fileURLToPath(new URL('index.mjs', dist)))) {
 }
 
 // The exports map resolves the package's own name to the bundle, and the
-// reserved prototypes subpath to its file.
+// prototypes to their file and to a module exporting the same text.
 assert.equal(import.meta.resolve('@specy/decompiler'), new URL('index.mjs', dist).href)
 const prototypes = import.meta.resolve('@specy/decompiler/prototypes/glibc.h')
 assert.equal(prototypes, new URL('prototypes/glibc.h', dist).href)
 assert.ok(existsSync(fileURLToPath(prototypes)), 'dist/prototypes/glibc.h is published')
+const glibc = readFileSync(fileURLToPath(prototypes), 'utf8')
+assert.equal(glibc, readFileSync(new URL('../prototypes/glibc.h', import.meta.url), 'utf8'))
+const { default: glibcModule } = await import('@specy/decompiler/prototypes/glibc')
+assert.equal(glibcModule, glibc, '@specy/decompiler/prototypes/glibc exports the text of glibc.h')
 
 // The licences of everything the wasm and the specs are built from.
 for (const file of ['LICENSE', 'ghidra/LICENSE', 'ghidra/NOTICE', 'ghidra/zlib_License.txt']) {
@@ -37,11 +41,11 @@ assert.match(decompiler.version, /^Ghidra_12\.1\.4_build [0-9a-f]{12}$/)
 const fixtures = new URL('./fixtures/', import.meta.url)
 const image = {
     ...readElfImage(new Uint8Array(readFileSync(new URL('elf/crackme', fixtures)))),
-    prototypes: readFileSync(new URL('prototypes.h', fixtures), 'utf8')
+    prototypes: glibc
 }
 const main = image.functions.find((fn) => fn.name === 'main')
 const program = decompiler.openProgram(image)
-assert.deepEqual(program.warnings, [], 'the test prototypes all apply')
+assert.deepEqual(program.warnings, [], 'glibc.h applies without a warning')
 const result = program.decompile(main.address, { maxInstructions: 1000 })
 assert.ok('text' in result, `main decompiles: ${result.error}`)
 const reference = readFileSync(new URL('reference/crackme-main.c', fixtures), 'utf8')
