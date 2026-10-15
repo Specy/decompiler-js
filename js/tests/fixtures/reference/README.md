@@ -3,6 +3,11 @@
 Known-good output the wasm build is compared against. Written by
 `scripts/native_reference.sh`; regenerate them only with it.
 
+Beside each `.c`, a `.json` holds the driver's whole result (`build/native/decompile --json`):
+every line's tokens with their kinds, instruction addresses and targets, which the wasm build
+must give alike. Ghidra's console prints plain text only, so the tokens are checked against the
+native driver, not against the console.
+
 Each `<fixture>-<function>.c` is the C printed for that function of `../elf/<fixture>` by the
 host layer's native driver (`build/native/decompile`, built from the unpatched vendored sources
 by `scripts/compile_native.sh`). The script checks it byte for byte against Ghidra's own console

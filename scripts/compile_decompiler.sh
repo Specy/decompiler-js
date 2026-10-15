@@ -53,7 +53,7 @@ link_flags=(
     # The specification files are written into the in-memory filesystem from
     # bytes the caller fetched, before the first program is opened.
     -sFORCE_FILESYSTEM=1
-    -sEXPORTED_FUNCTIONS=_malloc,_free,_decompiler_version,_decompiler_error,_decompiler_add_specs,_program_open,_program_warnings,_program_decompile,_program_close
+    -sEXPORTED_FUNCTIONS=_malloc,_free,_decompiler_version,_decompiler_error,_decompiler_heap_used,_decompiler_add_specs,_program_open,_program_warnings,_program_decompile,_program_close
     -sEXPORTED_RUNTIME_METHODS=FS,HEAPU8,UTF8ToString,stringToNewUTF8
 )
 

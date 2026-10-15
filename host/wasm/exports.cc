@@ -2,6 +2,7 @@
 // for every address below 2^53; strings as UTF-8. A function that fails
 // returns null (or 0) and leaves its message for decompiler_error().
 #include <emscripten/emscripten.h>
+#include <malloc.h>
 
 #include <cstdlib>
 #include <cstring>
@@ -36,6 +37,9 @@ EMSCRIPTEN_KEEPALIVE const char *decompiler_version() {
 
 /// The message of the last failure.
 EMSCRIPTEN_KEEPALIVE const char *decompiler_error() { return lastError.c_str(); }
+
+/// The bytes malloc has handed out and not had back.
+EMSCRIPTEN_KEEPALIVE double decompiler_heap_used() { return (double)mallinfo().uordblks; }
 
 /// Adds a directory of the in-memory filesystem holding a .ldefs file and the
 /// specification files it names, starting the library on the first call.

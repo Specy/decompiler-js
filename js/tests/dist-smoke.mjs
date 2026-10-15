@@ -54,6 +54,8 @@ const puts = correct.tokens.find((token) => correct.text.slice(token.start, toke
 assert.equal(puts.kind, 'function')
 assert.equal(puts.target, image.functions.find((fn) => fn.name === 'puts').address)
 assert.deepEqual(correct.addresses, [puts.address])
+const memory = decompiler.memory()
+assert.ok(memory.used > 0 && memory.size >= memory.used, 'memory() reports the heap')
 program.dispose()
 decompiler.dispose()
 

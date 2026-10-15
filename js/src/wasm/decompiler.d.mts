@@ -15,6 +15,7 @@ export interface DecompilerModule {
     _free(pointer: number): void
     _decompiler_version(): number
     _decompiler_error(): number
+    _decompiler_heap_used(): number
     _decompiler_add_specs(directory: number): number
     _program_open(image: number, size: number, languageId: number): number
     _program_warnings(program: number): number

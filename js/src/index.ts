@@ -77,7 +77,8 @@ export type TokenKind = 'keyword' | 'comment' | 'type' | 'function' | 'variable'
 const TOKEN_KINDS: readonly TokenKind[] = ['keyword', 'comment', 'type', 'function', 'variable', 'constant', 'syntax']
 
 export interface DecompiledToken {
-    /** Where it is in its line's text, in UTF-16 code units, end exclusive. */
+    /** Where it is in its line's text, in UTF-16 code units, end exclusive,
+     * spaces around it left out. */
     start: number
     end: number
     kind: TokenKind
@@ -91,7 +92,7 @@ export interface DecompiledToken {
 
 export interface DecompiledLine {
     text: string
-    /** Every token but whitespace, in order. */
+    /** The tokens, in order; the spaces between them are in the text only. */
     tokens: DecompiledToken[]
     /** The tokens' addresses, sorted, each once. */
     addresses: number[]
@@ -130,6 +131,10 @@ export interface Decompiler {
      * one. Throws when the image is malformed (overlapping regions, an
      * address that is not a non-negative safe integer). */
     openProgram(image: ProgramImage): DecompiledProgram
+    /** The wasm module's memory, which grows as needed and never shrinks
+     * (`size`), and how much of it the decompiler holds (`used`), in bytes:
+     * what an open program and its decompiled functions cost. */
+    memory(): { size: number; used: number }
     /** Disposes every program still open; the decompiler opens no more. */
     dispose(): void
 }
@@ -247,6 +252,9 @@ export async function loadDecompiler(options: LoadDecompilerOptions): Promise<De
             programs.add(program)
             return program
         },
+        memory() {
+            return { size: module.HEAPU8.buffer.byteLength, used: module._decompiler_heap_used() }
+        },
         dispose() {
             if (disposed) return
             for (const program of [...programs]) program.dispose()
@@ -267,10 +275,14 @@ function decodeFunction(json: string): DecompiledFunction {
         const tokens: DecompiledToken[] = []
         const addresses = new Set<number>()
         for (const [piece, kind, address, target] of pieces) {
-            const start = text.length
+            const at = text.length
             text += piece
-            if (piece.trim() === '') continue
-            const token: DecompiledToken = { start, end: text.length, kind: TOKEN_KINDS[kind] }
+            // A token covers its piece's text without the spaces around it
+            // (a comment starts "/* ").
+            const trimmed = piece.trim()
+            if (trimmed === '') continue
+            const start = at + piece.indexOf(trimmed)
+            const token: DecompiledToken = { start, end: start + trimmed.length, kind: TOKEN_KINDS[kind] }
             if (address >= 0) {
                 token.address = address
                 addresses.add(address)

@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Writes the native reference decompilations the wasm build is tested
 # against, js/tests/fixtures/reference/<fixture>-<function>.c, and checks each
-# against Ghidra's own console given the same program image.
+# against Ghidra's own console given the same program image. Beside each, the
+# driver's JSON result (<fixture>-<function>.json: the lines' tokens with
+# their kinds, addresses and targets), which the console cannot give.
 #
 #   scripts/native_reference.sh
 #
@@ -45,5 +47,8 @@ for entry in "${references[@]}"; do
     fi
     mkdir -p "$(dirname "$out")"
     cp "$work/driver.c" "$out"
+    build/native/decompile --json --prototypes "$fixtures/prototypes.h" specs/x86-64 "$fixtures/elf/$fixture" \
+        "$function" 2>/dev/null >"${out%.c}.json"
     echo "$(sha256sum "$out" | cut -d' ' -f1)  $out (driver and console agree)"
+    echo "$(sha256sum "${out%.c}.json" | cut -d' ' -f1)  ${out%.c}.json"
 done
