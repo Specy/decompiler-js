@@ -33,8 +33,11 @@ for entry in "${references[@]}"; do
         >"$work/driver.c"
     printf 'restore %s\noption readonly on\nload function %s\ndecompile\nprint C\nquit\n' "$work/save.xml" "$function" |
         SLEIGHHOME="$repo_dir/specs/x86-64" build/native/decomp_console >"$work/console.txt"
-    # The C is what the console prints between the prompts of `print C` and `quit`.
-    sed -n '/^\[decomp\]> print C$/,/^\[decomp\]> quit$/p' "$work/console.txt" | sed '1d;$d' >"$work/console.c"
+    # The C is what the console prints between the prompts of `print C` and
+    # `quit`, less the empty line the printer starts a function with, which
+    # the host layer drops.
+    sed -n '/^\[decomp\]> print C$/,/^\[decomp\]> quit$/p' "$work/console.txt" | sed '1d;$d' |
+        sed '1{/^$/d}' >"$work/console.c"
     if ! cmp -s "$work/driver.c" "$work/console.c"; then
         echo "The driver and Ghidra's console disagree on $fixture $function:" >&2
         diff "$work/console.c" "$work/driver.c" >&2 || true

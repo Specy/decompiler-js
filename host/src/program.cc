@@ -47,7 +47,18 @@ class HostArchitecture : public SleighArchitecture {
 
  public:
   HostArchitecture(ProgramImage image, const std::string &languageId, std::ostream *errors)
-      : SleighArchitecture("image", languageId, errors), pendingImage(std::move(image)) {}
+      : SleighArchitecture("image", languageId, errors), pendingImage(std::move(image)) {
+    markup = new MarkupPrintC(this);
+    for (PrintLanguage *&language : printlist)
+      if (language == print) {
+        delete language;
+        language = markup;
+      }
+    print = markup;
+  }
+
+  /// The printer, Ghidra's C printer recording what each token stands for.
+  MarkupPrintC *markup;
 
   DataOrganization organization;
 
@@ -153,8 +164,9 @@ std::vector<std::string> Program::warnings() const {
   return all;
 }
 
-std::string Program::decompile(uint64_t address) {
+DecompiledFunction Program::decompile(uint64_t address, uint32_t maxInstructions) {
   try {
+    architecture->max_instructions = maxInstructions;
     Address entry(architecture->getDefaultCodeSpace(), address);
     Funcdata *function = architecture->symboltab->getGlobalScope()->queryFunction(entry);
     if (function == nullptr) {
@@ -168,11 +180,7 @@ std::string Program::decompile(uint64_t address) {
     if (action->perform(*function) < 0 || !function->isProcComplete())
       throw std::runtime_error("Decompilation of " + function->getName() + " did not complete");
 
-    std::ostringstream text;
-    architecture->print->setOutputStream(&text);
-    architecture->print->docFunction(function);
-    architecture->print->setOutputStream(nullptr);
-    return text.str();
+    return architecture->markup->print(function);
   } catch (const std::runtime_error &) {
     throw;
   } catch (...) {

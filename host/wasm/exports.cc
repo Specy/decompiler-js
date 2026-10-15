@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <exception>
+#include <sstream>
 #include <string>
 
 #include "json.hh"
@@ -67,13 +68,24 @@ EMSCRIPTEN_KEEPALIVE char *program_warnings(host::Program *program) {
   return copyString(host::jsonStrings(program->warnings()));
 }
 
-/// The C of the function at the address, to be freed with free(), or null.
-EMSCRIPTEN_KEEPALIVE char *program_decompile(host::Program *program, double address) {
+/// The function starting at the address, decompiled following at most
+/// maxInstructions instructions (0 for Ghidra's default, 100,000), as JSON to
+/// be freed with free(): {"address", "name", "lines"}, each line an array of
+/// tokens [text, kind, address, target] with kind an index into keyword,
+/// comment, type, function, variable, constant, syntax and address and target
+/// -1 when absent (host/src/markup.hh); or {"address", "error"}.
+EMSCRIPTEN_KEEPALIVE char *program_decompile(host::Program *program, double address, uint32_t maxInstructions) {
+  uint64_t entry = (uint64_t)address;
   try {
-    return copyString(program->decompile((uint64_t)address));
+    return copyString(program->decompile(entry, maxInstructions == 0 ? host::Program::DEFAULT_MAX_INSTRUCTIONS
+                                                                     : maxInstructions)
+                          .json());
   } catch (const std::exception &error) {
-    fail(error);
-    return nullptr;
+    std::ostringstream json;
+    json << "{\"address\":" << entry << ",\"error\":";
+    host::writeJsonString(json, error.what());
+    json << "}";
+    return copyString(json.str());
   }
 }
 

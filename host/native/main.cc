@@ -1,11 +1,13 @@
 // The native reference driver: decompiles one function of an ELF executable
 // through the host layer, as the wasm build does, so the two can be compared.
 //
-//   decompile [--prototypes <file.h>] [--save <file.xml>] [--repeat <n>]
+//   decompile [--prototypes <file.h>] [--save <file.xml>] [--repeat <n>] [--json]
 //             <spec directory> <elf> <function name or 0xaddress>
 //
-// Prints the C to stdout, and the times and warnings to stderr. --prototypes
-// passes a file of C declarations with the program image. --save also writes the
+// Prints the C to stdout, and the times and warnings to stderr. --json prints
+// the result as the wasm's program_decompile returns it instead: the lines
+// with their tokens' kinds, addresses and targets. --prototypes passes a file
+// of C declarations with the program image. --save also writes the
 // program as a save file of Ghidra's XmlArchitecture, which Ghidra's own
 // console (build/native/decomp_console) restores to cross-check this driver.
 #include <chrono>
@@ -38,16 +40,19 @@ std::string readFile(const std::string &path) {
 int main(int argc, char **argv) {
   std::string savePath, prototypesPath;
   int repeat = 1;
+  bool json = false;
   int i = 1;
-  for (; i + 1 < argc && argv[i][0] == '-'; i += 2) {
+  for (; i < argc && argv[i][0] == '-'; ++i) {
     std::string option = argv[i];
-    if (option == "--save") savePath = argv[i + 1];
-    else if (option == "--prototypes") prototypesPath = argv[i + 1];
-    else if (option == "--repeat") repeat = std::stoi(argv[i + 1]);
+    if (option == "--json") json = true;
+    else if (i + 1 == argc) break;
+    else if (option == "--save") savePath = argv[++i];
+    else if (option == "--prototypes") prototypesPath = argv[++i];
+    else if (option == "--repeat") repeat = std::stoi(argv[++i]);
     else break;
   }
   if (argc - i != 3) {
-    std::cerr << "usage: decompile [--prototypes <file.h>] [--save <file.xml>] [--repeat <n>] "
+    std::cerr << "usage: decompile [--prototypes <file.h>] [--save <file.xml>] [--repeat <n>] [--json] "
                  "<spec directory> <elf> <function name or 0xaddress>\n";
     return 2;
   }
@@ -82,17 +87,17 @@ int main(int argc, char **argv) {
       if (!out) throw std::runtime_error("could not write " + savePath);
     }
 
-    std::string text;
+    host::DecompiledFunction result;
     for (int run = 0; run < repeat; ++run) {
       auto decompileStart = std::chrono::steady_clock::now();
-      text = program.decompile(address);
+      result = program.decompile(address);
       std::cerr << (run == 0 ? "first" : "again") << " decompile: " << std::fixed
                 << std::setprecision(1) << millisecondsSince(decompileStart) << " ms\n";
     }
     std::cerr << "architecture: " << std::fixed << std::setprecision(1) << build << " ms ("
               << host::ghidraVersion() << ")\n";
     for (const std::string &warning : program.warnings()) std::cerr << "warning: " << warning << "\n";
-    std::cout << text;
+    std::cout << (json ? result.json() : result.text()) << "\n";
     return 0;
   } catch (const std::exception &error) {
     std::cerr << "error: " << error.what() << "\n";

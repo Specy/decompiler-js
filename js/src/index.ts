@@ -67,7 +67,42 @@ export interface ProgramImage {
     prototypes: string
 }
 
-export type DecompiledFunction = { address: number; text: string } | { address: number; error: string }
+/** What a token is, from Ghidra's syntax highlighting: parameters and
+ * globals are variables; punctuation, operators, labels and field names are
+ * syntax. */
+export type TokenKind = 'keyword' | 'comment' | 'type' | 'function' | 'variable' | 'constant' | 'syntax'
+
+const TOKEN_KINDS: readonly TokenKind[] = ['keyword', 'comment', 'type', 'function', 'variable', 'constant', 'syntax']
+
+export interface DecompiledToken {
+    /** Where it is in its line's text, in UTF-16 code units, end exclusive. */
+    start: number
+    end: number
+    kind: TokenKind
+    /** The instruction whose operation the token belongs to; for a comment,
+     * the address it is attached to. */
+    address?: number
+    /** What a name refers to: a function's entry, a global's or string's
+     * start, a label's code. */
+    target?: number
+}
+
+export interface DecompiledLine {
+    text: string
+    /** Every token but whitespace, in order. */
+    tokens: DecompiledToken[]
+    /** The tokens' addresses, sorted, each once. */
+    addresses: number[]
+}
+
+export type DecompiledFunction =
+    | { address: number; name: string; text: string; lines: DecompiledLine[] }
+    | { address: number; error: string }
+
+export interface DecompileOptions {
+    /** The most instructions the decompiler follows; Ghidra's default is 100,000. */
+    maxInstructions?: number
+}
 
 export interface DecompiledProgram {
     /** What went wrong opening the program without stopping it: each
@@ -77,7 +112,7 @@ export interface DecompiledProgram {
     readonly warnings: readonly string[]
     /** The C of the function starting at the address, one of the image's
      * functions, or the reason there is none. */
-    decompile(address: number): DecompiledFunction
+    decompile(address: number, options?: DecompileOptions): DecompiledFunction
     /** Frees the program's copy of the image. */
     dispose(): void
 }
@@ -178,14 +213,13 @@ export async function loadDecompiler(options: LoadDecompilerOptions): Promise<De
             let open = true
             const program: DecompiledProgram = {
                 warnings,
-                decompile(address) {
+                decompile(address, options) {
                     if (!open) throw new Error('The program was disposed')
-                    const text = module._program_decompile(handle, address)
-                    if (text === 0) return { address, error: lastError(module) }
+                    const json = module._program_decompile(handle, address, options?.maxInstructions ?? 0)
                     try {
-                        return { address, text: module.UTF8ToString(text) }
+                        return decodeFunction(module.UTF8ToString(json))
                     } finally {
-                        module._free(text)
+                        module._free(json)
                     }
                 },
                 dispose() {
@@ -204,6 +238,34 @@ export async function loadDecompiler(options: LoadDecompilerOptions): Promise<De
             disposed = true
         }
     }
+}
+
+type RawToken = [text: string, kind: number, address: number, target: number]
+type RawFunction = { address: number; name: string; lines: RawToken[][] } | { address: number; error: string }
+
+/** program_decompile's JSON (host/wasm/exports.cc) as a DecompiledFunction. */
+function decodeFunction(json: string): DecompiledFunction {
+    const raw = JSON.parse(json) as RawFunction
+    if ('error' in raw) return { address: raw.address, error: raw.error }
+    const lines = raw.lines.map((pieces): DecompiledLine => {
+        let text = ''
+        const tokens: DecompiledToken[] = []
+        const addresses = new Set<number>()
+        for (const [piece, kind, address, target] of pieces) {
+            const start = text.length
+            text += piece
+            if (piece.trim() === '') continue
+            const token: DecompiledToken = { start, end: text.length, kind: TOKEN_KINDS[kind] }
+            if (address >= 0) {
+                token.address = address
+                addresses.add(address)
+            }
+            if (target >= 0) token.target = target
+            tokens.push(token)
+        }
+        return { text, tokens, addresses: [...addresses].sort((a, b) => a - b) }
+    })
+    return { address: raw.address, name: raw.name, text: lines.map((line) => line.text).join('\n'), lines }
 }
 
 /** The image in the binary form host/src/program_image.hh describes. */

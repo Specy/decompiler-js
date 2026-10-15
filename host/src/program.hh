@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "markup.hh"
 #include "program_image.hh"
 
 namespace host {
@@ -42,9 +43,14 @@ class Program {
   Program(ProgramImage image, const std::string &languageId);
   ~Program();
 
+  /// Ghidra's default for maxInstructions, DecompileOptions'
+  /// SUGGESTED_MAX_INSTRUCTIONS and Architecture::max_instructions.
+  static constexpr uint32_t DEFAULT_MAX_INSTRUCTIONS = 100000;
+
   /// The C for the function starting at the address, which must be one of
-  /// the image's functions.
-  std::string decompile(uint64_t address);
+  /// the image's functions, as lines of linked tokens. The decompiler
+  /// follows at most maxInstructions instructions of it.
+  DecompiledFunction decompile(uint64_t address, uint32_t maxInstructions = DEFAULT_MAX_INSTRUCTIONS);
 
   /// What went wrong building the program without stopping it: each line
   /// Ghidra printed while building the architecture, then each declaration
