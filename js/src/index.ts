@@ -137,13 +137,16 @@ export interface Decompiler {
     /** The Ghidra release the decompiler was built from and its commit. */
     readonly version: string
     readonly architecture: Architecture
-    /** Builds the decompiler's view of a program, about 100 ms for a small
-     * one. Throws when the image is malformed (overlapping regions, an
-     * address that is not a non-negative safe integer). */
+    /** Builds the decompiler's view of a program: about 130 ms for the
+     * first, which decodes the architecture's SLEIGH description, then 10 to
+     * 30 ms. Several programs can be open at once. Throws when the image is
+     * malformed (overlapping regions, an address that is not a non-negative
+     * safe integer). */
     openProgram(image: ProgramImage): DecompiledProgram
     /** The wasm module's memory, which grows as needed and never shrinks
      * (`size`), and how much of it the decompiler holds (`used`), in bytes:
-     * what an open program and its decompiled functions cost. */
+     * what the open programs cost. A decompilation keeps nothing once it
+     * returns, but the memory grows to fit the largest one. */
     memory(): { size: number; used: number }
     /** Disposes every program still open; the decompiler opens no more. */
     dispose(): void

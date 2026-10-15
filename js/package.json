@@ -32,6 +32,7 @@
         "dev": "tsdown --watch",
         "test": "vitest run",
         "test:dist": "node tests/dist-smoke.mjs",
+        "measure": "node scripts/measure.mjs",
         "type-check": "tsc --noEmit"
     },
     "devDependencies": {

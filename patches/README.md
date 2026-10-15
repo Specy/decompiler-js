@@ -27,6 +27,7 @@ patch that changes the output fails those tests rather than passing unnoticed.
 | Patch | What it does |
 | --- | --- |
 | `0001-action-checkpoint.patch` | Adds `Action::checkpoint`, a hook called before each attempt to apply an action, null by default, which the host layer sets to enforce a decompilation's time limit (`host/src/program.cc`). |
+| `0002-sleigh-resume.patch` | Adds `Sleigh::resume`, which points the translator every program of a language shares back at a program opened earlier, so that several programs can be open at once (`HostArchitecture::useTranslator`). |
 
 Ghidra 12.1.4 otherwise builds with Emscripten unchanged: the specification files are read
 through `ifstream` and the `.ldefs` directory is scanned with `opendir`, both of which

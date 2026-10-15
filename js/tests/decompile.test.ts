@@ -215,6 +215,30 @@ test('gives up with an error past maxInstructions', async () => {
     }
 })
 
+test('programs open at once each decompile their own bytes, before and after another is disposed', async () => {
+    const reference = await readFile(fixture('reference/crackme-main.c'), 'utf8')
+    const crackme = decompiler.openProgram(await fixtureImage('crackme'))
+    // The decompiler keeps one SLEIGH translator per language, which each
+    // new program takes over.
+    const hello = await fixtureImage('hello-atexit-static')
+    const helloMain = hello.functions.find((fn) => fn.name === 'main')!.address
+    const other = decompiler.openProgram(hello)
+    try {
+        expect(`${decompiled(crackme.decompile(MAIN)).text}\n`).toBe(reference)
+        const helloText = decompiled(other.decompile(helloMain)).text
+        expect(helloText).toContain('atexit(farewell);')
+        expect(`${decompiled(crackme.decompile(MAIN)).text}\n`).toBe(reference)
+        other.dispose()
+        expect(`${decompiled(crackme.decompile(MAIN)).text}\n`).toBe(reference)
+        const third = decompiler.openProgram(hello)
+        third.dispose()
+        expect(`${decompiled(crackme.decompile(MAIN)).text}\n`).toBe(reference)
+    } finally {
+        other.dispose()
+        crackme.dispose()
+    }
+})
+
 test('a disposed program refuses to decompile', async () => {
     const program = decompiler.openProgram(await fixtureImage('crackme'))
     program.dispose()

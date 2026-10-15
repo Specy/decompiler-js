@@ -25,6 +25,21 @@ using namespace ghidra;
 class HostArchitecture : public SleighArchitecture {
   ProgramImage pendingImage;
 
+  /// The architecture each of SleighArchitecture's shared translators (one
+  /// per language) was last pointed at.
+  static std::map<const Translate *, const HostArchitecture *> &translatorUsers() {
+    static std::map<const Translate *, const HostArchitecture *> users;
+    return users;
+  }
+
+  // SleighArchitecture resets the language's translator to this
+  // architecture's load image and context.
+  Translate *buildTranslator(DocumentStorage &store) override {
+    Translate *translator = SleighArchitecture::buildTranslator(store);
+    translatorUsers()[translator] = this;
+    return translator;
+  }
+
   void buildLoader(DocumentStorage &store) override {
     collectSpecFiles(*errorstream);
     loader = new ImageLoadImage(std::move(pendingImage), getTarget());
@@ -62,6 +77,22 @@ class HostArchitecture : public SleighArchitecture {
   MarkupPrintC *markup;
 
   DataOrganization organization;
+
+  ~HostArchitecture() override {
+    auto user = translatorUsers().find(translate);
+    if (user != translatorUsers().end() && user->second == this) translatorUsers().erase(user);
+  }
+
+  /// Points the language's translator, which every program of the language
+  /// shares, back at this program's bytes and context when another program
+  /// has been opened or decompiled since this one last used it
+  /// (patches/0002-sleigh-resume.patch).
+  void useTranslator() {
+    const HostArchitecture *&user = translatorUsers()[translate];
+    if (user == this) return;
+    const_cast<Sleigh *>(static_cast<const Sleigh *>(translate))->resume(loader, context);
+    user = this;
+  }
 
   const ImageLoadImage &image() const { return *static_cast<const ImageLoadImage *>(loader); }
 
@@ -164,6 +195,21 @@ std::string duration(uint32_t milliseconds) {
 /// What FlowInfo throws past Architecture::max_instructions (flow.cc).
 const char *const TOO_MANY_INSTRUCTIONS = "Flow exceeded maximum allowable instructions";
 
+/// Clears a function's analysis when it goes out of scope, however its
+/// decompilation ended. Nothing reuses it, since each decompilation starts
+/// afresh, and kept it is costly: decompiling each of hello-atexit-static's
+/// 1,087 functions once left 944 MB of analyses in the heap.
+struct ClearAnalysisAfter {
+  Architecture &architecture;
+  Funcdata *function;
+  ~ClearAnalysisAfter() {
+    try {
+      architecture.clearAnalysis(function);
+    } catch (...) {
+    }
+  }
+};
+
 [[noreturn]] void rethrow() {
   try {
     throw;
@@ -227,6 +273,8 @@ DecompiledFunction Program::decompile(uint64_t address, uint32_t maxInstructions
       throw std::runtime_error(message.str());
     }
     if (function->isProcStarted()) architecture->clearAnalysis(function);
+    ClearAnalysisAfter cleared{*architecture, function};
+    architecture->useTranslator();
     Action *action = architecture->allacts.getCurrent();
     action->reset(*function);
     {
@@ -238,8 +286,6 @@ DecompiledFunction Program::decompile(uint64_t address, uint32_t maxInstructions
   } catch (const std::runtime_error &) {
     throw;
   } catch (const LowlevelError &error) {
-    // A decompilation that failed is not kept: a long one holds much memory.
-    if (function != nullptr) architecture->clearAnalysis(function);
     // Ghidra may have caught the TimeLimitError and thrown another error
     // about the step it interrupted.
     if (deadline.passed)
@@ -250,7 +296,6 @@ DecompiledFunction Program::decompile(uint64_t address, uint32_t maxInstructions
                                " instructions");
     throw std::runtime_error(error.explain);
   } catch (...) {
-    if (function != nullptr) architecture->clearAnalysis(function);
     rethrow();
   }
 }

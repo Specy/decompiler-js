@@ -1,0 +1,72 @@
+Why: two programs open at once must each decode their own bytes. A
+SleighArchitecture keeps one translator (Sleigh) per language in a static
+map and, for each new Architecture of that language, resets it to the new
+Architecture's load image and context database (buildTranslator). An
+earlier Architecture still open then decodes its instructions from the
+newer one's bytes, and from freed memory once that one is deleted: in wasm,
+"table index is out of bounds". Ghidra's console and Java side only ever
+use one Architecture at a time. This adds Sleigh::resume, which points the
+translator back at an Architecture it was initialized for; reset() alone
+leaves it without a disassembly cache, and initialize() would register the
+context variables a second time, which the context database refuses once it
+holds values. The host layer calls it before decompiling with a program
+that is not the translator's last (host/src/program.cc). Building a
+translator per Architecture instead costs each program another 120 ms and
+18 MB of decoded SLEIGH tables.
+Upstream: not reported; upstream uses one Architecture at a time.
+
+--- a/cpp/sleigh.hh
++++ b/cpp/sleigh.hh
+@@ -166,6 +166,7 @@
+   mutable DisassemblyCache *discache;	///< Cache of recently parsed instructions
+   mutable PcodeCacher pcode_cache;	///< Cache of p-code data just prior to emitting
+   void clearForDelete(void);		///< Delete the context and disassembly caches
++  void buildDisassemblyCache(void);	///< Allocate the disassembly cache (decompiler-js patch)
+ protected:
+   ParserContext *obtainContext(const Address &addr,int4 state) const;
+   void resolve(ParserContext &pos) const;	///< Generate a parse tree suitable for disassembly
+@@ -174,6 +175,7 @@
+   Sleigh(LoadImage *ld,ContextDatabase *c_db);		///< Constructor
+   virtual ~Sleigh(void);				///< Destructor
+   void reset(LoadImage *ld,ContextDatabase *c_db);	///< Reset the engine for a new program
++  void resume(LoadImage *ld,ContextDatabase *c_db);	///< Return to a program initialized earlier (decompiler-js patch)
+   virtual void initialize(DocumentStorage &store);
+   virtual void registerContext(const string &name,int4 sbit,int4 ebit);
+   virtual void setContextDefault(const string &nm,uintm val);
+--- a/cpp/sleigh.cc
++++ b/cpp/sleigh.cc
+@@ -569,6 +569,12 @@
+   }
+   else
+     reregisterContext();
++  buildDisassemblyCache();
++}
++
++void Sleigh::buildDisassemblyCache(void)
++
++{
+   uint4 parser_cachesize = 2;
+   uint4 parser_windowsize = 32;
+   if ((maxdelayslotbytes > 1)||(unique_allocatemask != 0)) {
+@@ -578,6 +584,21 @@
+   discache = new DisassemblyCache(this,cache,getConstantSpace(),parser_cachesize,parser_windowsize);
+ }
+ 
++/// A SleighArchitecture keeps one translator per language and resets and initializes it
++/// for each new Architecture of that language, which leaves an earlier Architecture still in
++/// use decoding through the new one's load image and context. This points the translator back
++/// at the given load image and context database, which initialize() has already registered
++/// the context variables with, as reset() and initialize() would for a new one.
++/// (decompiler-js patch, not upstream)
++/// \param ld is the load image of the program returned to
++/// \param c_db is the context database of the program returned to
++void Sleigh::resume(LoadImage *ld,ContextDatabase *c_db)
++
++{
++  reset(ld,c_db);
++  buildDisassemblyCache();
++}
++
+ /// \brief Obtain a parse tree for the instruction at the given address
+ ///
+ /// The tree may be cached from a previous access.  If the address
