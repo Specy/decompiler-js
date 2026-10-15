@@ -15,7 +15,6 @@ SRC ?= ghidra/decompile
 HOST ?= host
 CXX ?= g++
 CC ?= gcc
-AR ?= ar
 OPT ?= -O2
 EXTRA_CXXFLAGS ?=
 EXTRA_CFLAGS ?=
@@ -24,9 +23,14 @@ EXTRA_LDFLAGS ?=
 CPP := $(SRC)/cpp
 ZLIB := $(SRC)/zlib
 
+# The release ghidra/ holds, from the README vendor-ghidra.sh writes.
+GHIDRA_TAG := $(shell sed -n 's/^- Tag: `\(.*\)`$$/\1/p' ghidra/README.md)
+GHIDRA_COMMIT := $(shell sed -n 's/^- Commit: `\(.\{12\}\).*`$$/\1/p' ghidra/README.md)
+
 # Upstream builds with -std=c++11; our host layer uses C++17.
 GHIDRA_CXXFLAGS := -std=c++11 $(OPT) -Wall -Wno-sign-compare -DLOCAL_ZLIB $(EXTRA_CXXFLAGS)
-HOST_CXXFLAGS := -std=c++17 $(OPT) -Wall -Wno-sign-compare -DLOCAL_ZLIB -I$(CPP) $(EXTRA_CXXFLAGS)
+HOST_CXXFLAGS := -std=c++17 $(OPT) -Wall -Wno-sign-compare -DLOCAL_ZLIB -I$(CPP) \
+	-DGHIDRA_VERSION='"$(GHIDRA_TAG) $(GHIDRA_COMMIT)"' $(EXTRA_CXXFLAGS)
 ZLIB_CFLAGS := $(OPT) -DNO_GZIP $(EXTRA_CFLAGS)
 
 # Upstream's partition of the sources (Makefile: CORE, DECCORE, SLEIGH, SLACOMP).
@@ -54,6 +58,7 @@ CONSOLE_EXTRA := callgraph ifacedecomp ifaceterm interface loadimage_xml raw_arc
 
 HOST_LIBRARY := $(basename $(notdir $(wildcard $(HOST)/src/*.cc)))
 HOST_NATIVE := $(basename $(notdir $(wildcard $(HOST)/native/*.cc)))
+HOST_WASM := $(basename $(notdir $(wildcard $(HOST)/wasm/*.cc)))
 
 obj = $(addprefix $(BUILD)/$(1)/,$(addsuffix .o,$(2)))
 
@@ -62,29 +67,27 @@ SLEIGH_OBJS := $(call obj,ghidra,$(CORE) $(SLEIGH) $(SLACOMP)) $(call obj,zlib,$
 CONSOLE_OBJS := $(LIBRARY_OBJS) $(call obj,ghidra,$(CONSOLE_EXTRA))
 HOST_OBJS := $(call obj,host,$(HOST_LIBRARY))
 NATIVE_OBJS := $(call obj,host-native,$(HOST_NATIVE))
+WASM_OBJS := $(call obj,host-wasm,$(HOST_WASM))
 
-.PHONY: sleigh library host console driver
+# Everything links object files rather than archives: Ghidra registers its
+# capabilities (the C printer, the architectures) from static constructors,
+# which a linker drops with any archive member nothing else refers to.
+.PHONY: sleigh console driver wasm
 sleigh: $(BUILD)/sleigh
-library: $(BUILD)/libdecomp.a
-host: $(BUILD)/libhost.a
 console: $(BUILD)/decomp_console
 driver: $(BUILD)/decompile
+wasm: $(BUILD)/decompiler.mjs
 
 $(BUILD)/sleigh: $(SLEIGH_OBJS)
 	$(CXX) $(OPT) -o $@ $^ $(EXTRA_LDFLAGS)
 
-$(BUILD)/libdecomp.a: $(LIBRARY_OBJS)
-	rm -f $@
-	$(AR) qc $@ $^
-
-$(BUILD)/libhost.a: $(HOST_OBJS)
-	rm -f $@
-	$(AR) qc $@ $^
-
 $(BUILD)/decomp_console: $(CONSOLE_OBJS)
 	$(CXX) $(OPT) -o $@ $^ $(EXTRA_LDFLAGS)
 
-$(BUILD)/decompile: $(NATIVE_OBJS) $(BUILD)/libhost.a $(BUILD)/libdecomp.a
+$(BUILD)/decompile: $(NATIVE_OBJS) $(HOST_OBJS) $(LIBRARY_OBJS)
+	$(CXX) $(OPT) -o $@ $^ $(EXTRA_LDFLAGS)
+
+$(BUILD)/decompiler.mjs: $(WASM_OBJS) $(HOST_OBJS) $(LIBRARY_OBJS)
 	$(CXX) $(OPT) -o $@ $^ $(EXTRA_LDFLAGS)
 
 # The console's own objects are compiled with __TERMINAL__, as upstream's are.
@@ -103,6 +106,10 @@ $(BUILD)/host/%.o: $(HOST)/src/%.cc
 	$(CXX) $(HOST_CXXFLAGS) -MMD -MP -c $< -o $@
 
 $(BUILD)/host-native/%.o: $(HOST)/native/%.cc
+	@mkdir -p $(@D)
+	$(CXX) $(HOST_CXXFLAGS) -I$(HOST)/src -MMD -MP -c $< -o $@
+
+$(BUILD)/host-wasm/%.o: $(HOST)/wasm/%.cc
 	@mkdir -p $(@D)
 	$(CXX) $(HOST_CXXFLAGS) -I$(HOST)/src -MMD -MP -c $< -o $@
 
