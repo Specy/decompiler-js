@@ -1,7 +1,8 @@
 // Smoke test for the published artifact: loads the decompiler through dist/
 // with every default (the wasm beside dist/wasm/decompiler.mjs, the specs in
-// dist/specs/) and decompiles crackme's main, so it covers what a consumer of
-// @specy/decompiler imports rather than the sources vitest exercises.
+// dist/specs/) and decompiles crackme's main, checking the text, the warnings
+// and the lines' tokens, so it covers what a consumer of @specy/decompiler
+// imports rather than the sources vitest exercises.
 //
 // The vitest suite runs against src/ and passes the repository's specs/ by
 // URL; the bundle finds its files through scripts/copy-assets.mjs instead,
@@ -40,11 +41,19 @@ const image = {
 }
 const main = image.functions.find((fn) => fn.name === 'main')
 const program = decompiler.openProgram(image)
-const result = program.decompile(main.address)
+assert.deepEqual(program.warnings, [], 'the test prototypes all apply')
+const result = program.decompile(main.address, { maxInstructions: 1000 })
 assert.ok('text' in result, `main decompiles: ${result.error}`)
-const normalized = (text) => text.replace(/\s+/g, ' ').trim()
 const reference = readFileSync(new URL('reference/crackme-main.c', fixtures), 'utf8')
-assert.equal(normalized(result.text), normalized(reference), "crackme's main matches the native reference")
+assert.equal(`${result.text}\n`, reference, "crackme's main matches the native reference")
+assert.equal(result.name, 'main')
+assert.equal(result.lines.map((line) => line.text).join('\n'), result.text)
+const correct = result.lines.find((line) => line.text.trim() === 'puts("Correct!");')
+assert.ok(correct, 'a line calls puts("Correct!")')
+const puts = correct.tokens.find((token) => correct.text.slice(token.start, token.end) === 'puts')
+assert.equal(puts.kind, 'function')
+assert.equal(puts.target, image.functions.find((fn) => fn.name === 'puts').address)
+assert.deepEqual(correct.addresses, [puts.address])
 program.dispose()
 decompiler.dispose()
 

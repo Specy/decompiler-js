@@ -2,7 +2,7 @@
 
 Ghidra's C++ decompiler compiled to WebAssembly, for decompiling machine code in a browser or in Node without Java or a server.
 
-Work in progress: the build works and decompiles a function to plain C; types, names of data, strings, prototypes and the links from the C back to instruction addresses are still to come.
+Work in progress. The caller describes a program (its memory, the names of its functions and data, where its strings are, C declarations of the library functions it calls) and gets a function's C as Ghidra's GUI prints it (Ghidra's type names, string literals, prototypes bound by name), as lines of tokens, each linked to the instruction it came from and to the function or data it names. Still to come: the glibc prototypes the package ships, the guards on time, and measurements.
 
 ## Layout
 
