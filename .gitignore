@@ -1,0 +1,9 @@
+.DS_Store
+.idea
+node_modules
+dist
+npm-debug.log*
+
+# Native and Emscripten build trees (scripts/compile_*.sh). The outputs that
+# are published, js/src/wasm/ and specs/, are committed.
+/build
