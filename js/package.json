@@ -1,8 +1,9 @@
 {
     "name": "@specy/decompiler",
     "type": "module",
-    "version": "0.0.0",
+    "version": "1.0.0",
     "description": "Ghidra's decompiler compiled to WebAssembly",
+    "keywords": ["decompiler", "ghidra", "webassembly", "wasm", "x86-64", "reverse-engineering"],
     "repository": {
         "type": "git",
         "url": "git+https://github.com/Specy/decompiler-js.git",
@@ -24,7 +25,7 @@
         },
         "./package.json": "./package.json"
     },
-    "files": ["dist"],
+    "files": ["dist", "CHANGELOG.md"],
     "scripts": {
         "build": "tsdown && node scripts/copy-assets.mjs",
         "build:specs": "../scripts/compile_specs.sh",

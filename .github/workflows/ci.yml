@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      # main is this repository's default branch.
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      # Node is the whole toolchain here. decompiler.wasm is committed under
+      # js/src/wasm and the compiled processor descriptions under specs/, so a
+      # build only bundles TypeScript around artifacts that are already in the
+      # tree. Rebuilding them needs a C++ compiler (the SLEIGH compiler) and
+      # emsdk 6.0.9 (the wasm), which is minutes of work for inputs that change
+      # with a Ghidra upgrade or a patch; scripts/compile_specs.sh and
+      # scripts/compile_decompiler.sh are run by hand and the result is
+      # committed. This job therefore cannot catch a break in those, only in
+      # everything above them.
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          # The smoke test imports a TypeScript helper, which needs Node's
+          # type stripping.
+          node-version: 24
+          cache: npm
+          cache-dependency-path: js/package-lock.json
+
+      - name: Install dependencies
+        working-directory: js
+        run: npm ci
+
+      # tsdown emits declarations but does not type-check the test files, and
+      # the tests are where the wrapper's public surface is actually used. This
+      # runs first because a type error is the cheapest failure to read.
+      - name: Type-check
+        working-directory: js
+        run: npm run type-check
+
+      # The tests, in Node against src/ and the committed wasm: crackme's
+      # functions against the native references, names and links, prototypes,
+      # pointers, unmapped bytes, the guards and memory.
+      - name: Run tests
+        working-directory: js
+        run: npm test
+
+      # Bundles src/ into dist/ the way a release would, and
+      # scripts/copy-assets.mjs puts the wasm, the processor descriptions, the
+      # prototypes and the licences beside it.
+      - name: Build the library
+        working-directory: js
+        run: npm run build
+
+      # Decompiles through the built dist/ and the package's own exports, which
+      # the tests above cannot see: they pass the repository's specs/ by URL,
+      # so the copied assets can break with every src test still green.
+      - name: Run smoke test
+        working-directory: js
+        run: npm run test:dist

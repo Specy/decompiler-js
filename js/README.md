@@ -4,6 +4,10 @@ Ghidra's C++ decompiler, from Ghidra 12.1.4, compiled to WebAssembly: C for a fu
 
 ## Usage
 
+```sh
+npm install @specy/decompiler
+```
+
 ```ts
 import { loadDecompiler } from '@specy/decompiler'
 import glibc from '@specy/decompiler/prototypes/glibc'
@@ -63,6 +67,8 @@ The only architecture is `'x86-64'`: Ghidra's `x86:LE:64:default` language with 
 
 `decompiler.version` names the Ghidra release and commit the module was built from (`Ghidra_12.1.4_build 8b6bbb857acc`).
 
+The module uses WebAssembly exception handling, which Chrome 95, Firefox 100 and Safari 15.2 and later support. Emscripten builds it for Node 18.3 and later; the tests run on Node 24.
+
 ### Describing a program
 
 `openProgram(image)` takes a `ProgramImage`, what a loader or a disassembler already knows about the program; the package reads no executable format.
@@ -105,7 +111,7 @@ Two options bound a decompilation, as Ghidra's own options do:
 
 | Option | Default | Past it |
 | --- | --- | --- |
-| `maxInstructions` | 100,000 | `{ address, error: 'printf_positional has more than 1000 instructions' }` |
+| `maxInstructions` | 100,000 | `{ address, error: 'printf_positional has more than 1000 instructions' }`, with `maxInstructions: 1000` |
 | `timeLimitMs` | 30,000 | `{ address, error: 'printf_positional took longer than 30 seconds to decompile' }` |
 
 The time is checked inside the module before each step of the decompiler's analysis, so a call returns a little after its limit (50 to 250 ms after it in the measurements), without anything kept of the stopped decompilation. Both take positive whole numbers below 2^32.
