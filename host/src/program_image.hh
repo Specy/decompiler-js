@@ -41,31 +41,42 @@ struct StringRange {
   uint64_t length = 0;
 };
 
+/// A pointer-sized slot holding the address of the function named name: a
+/// GOT entry the dynamic linker fills (`__libc_start_main@got`), whose value
+/// the file does not hold. A call through the slot is a call of that
+/// function.
+struct PointerName {
+  uint64_t address = 0;
+  std::string name;
+};
+
 struct ProgramImage {
   std::vector<Region> regions;
   std::vector<FunctionName> functions;
   std::vector<DataName> data;
   std::vector<StringRange> strings;
+  std::vector<PointerName> pointers;
   /// C declarations of the library functions the program calls, the types
   /// they need and its global variables' types (see declarations.hh).
   std::string prototypes;
 };
 
-/// Sorts the regions, functions, data and strings by address. Keeps the first
-/// function, the first data name and the first string given at each address,
-/// so a caller lists its preferred name first, and drops nameless functions
-/// and data and empty strings. Throws std::invalid_argument when regions
-/// overlap.
+/// Sorts the regions, functions, data, strings and pointers by address. Keeps
+/// the first function, the first data name, the first string and the first
+/// pointer given at each address, so a caller lists its preferred name first,
+/// and drops nameless functions, data and pointers and empty strings. Throws
+/// std::invalid_argument when regions overlap.
 void normalize(ProgramImage &image);
 
 /// Reads the image from the binary form the wasm exports take, every integer
 /// little endian and every name UTF-8:
 ///
-///   "DIMG", u32 version (1)
+///   "DIMG", u32 version (2)
 ///   u32 count, then per region:   u64 address, u32 flags (1 read-only, 2 executable), u32 size, bytes
 ///   u32 count, then per function: u64 address, u32 size, name
 ///   u32 count, then per data:     u64 address, u64 size (0 unknown), u32 size, name
 ///   u32 count, then per string:   u64 address, u64 length
+///   u32 count, then per pointer:  u64 address, u32 size, name
 ///   u32 size, the prototypes
 ///
 /// Throws std::invalid_argument on a malformed buffer.

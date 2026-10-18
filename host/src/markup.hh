@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <deque>
+#include <map>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -29,8 +30,9 @@ struct MarkupToken {
   /// one), or for a comment the address it is attached to.
   bool hasAddress = false;
   uint64_t address = 0;
-  /// The address of what a name refers to: a function's entry, a global's or
-  /// string's start, a label's code.
+  /// The address of what a name refers to: a function's entry (or, for a
+  /// function known only through a pointer, the pointer's slot), a global's
+  /// or string's start, a label's code.
   bool hasTarget = false;
   uint64_t target = 0;
 };
@@ -97,9 +99,15 @@ class RecordingEmit : public ghidra::EmitPrettyPrint {
 class MarkupPrintC : public ghidra::PrintC {
   RecordingEmit *recorder;
   std::ostringstream stream;  // the markup of the function being printed
+  std::map<uint64_t, uint64_t> aliases;
 
  public:
   explicit MarkupPrintC(ghidra::Architecture *architecture);
+
+  /// Makes a function name whose entry is at entry target another address:
+  /// a function known only through a pointer targets the pointer's slot
+  /// rather than the placeholder it was given.
+  void aliasTarget(uint64_t entry, uint64_t target) { aliases[entry] = target; }
 
   /// The function, decompiled already, as lines of linked tokens.
   DecompiledFunction print(ghidra::Funcdata *function);

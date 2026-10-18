@@ -2,7 +2,7 @@
 
 Ghidra's C++ decompiler, from Ghidra 12.1.4, compiled to WebAssembly, for decompiling machine code in a browser or in Node without Java or a server.
 
-The caller describes a program (its memory, the names of its functions and data, where its strings are, C declarations of the library functions it calls) and gets a function's C as Ghidra prints it, as lines of tokens, each linked to the instruction it came from and to the function or data it names. One architecture so far: x86-64, with the System V calling convention. The npm package, `@specy/decompiler`, is in `js/`; its [README](js/README.md) documents the API, the glibc prototypes it ships, the limits on a decompilation's instructions and time, and measurements.
+The caller describes a program (its memory, the names of its functions and data, where its strings are, which slots hold the addresses of which functions, C declarations of the library functions it calls) and gets a function's C as Ghidra prints it, as lines of tokens, each linked to the instruction it came from and to the function or data it names. One architecture so far: x86-64, with the System V calling convention. The npm package, `@specy/decompiler`, is in `js/`; its [README](js/README.md) documents the API, the glibc prototypes it ships, the limits on a decompilation's instructions and time, and measurements.
 
 ## Layout
 

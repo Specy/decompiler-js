@@ -23,8 +23,12 @@ const program = decompiler.openProgram({
     { address: 0x10a0, name: 'puts' },
     // ...
   ],
-  data: [{ address: 0x4010, name: 'stdin', size: 8 }],
+  data: [
+    { address: 0x4010, name: 'stdin', size: 8 },
+    { address: 0x3fd8, name: '__libc_start_main@got', size: 8 },
+  ],
   strings: [{ address: 0x2017, length: 8 }], // "hunter2" and its terminator
+  pointers: [{ address: 0x3fd8, name: '__libc_start_main' }], // a GOT slot
   prototypes: glibc,
 })
 
@@ -53,7 +57,7 @@ undefined8 main(void)
 
 ### Loading
 
-`loadDecompiler({ architecture, wasmUrl?, specsUrl? })` fetches `decompiler.wasm` (2.1 MB, 713 KB gzipped) and the architecture's processor description (`specs/x86-64/`: `x86-64.sla`, 501 KB, and three specification files, 29 KB), by default from beside the package's module through `new URL(…, import.meta.url)`, which bundlers follow and copy. `wasmUrl` and `specsUrl` (a directory) serve them from elsewhere. In Node, `file:` URLs are read from disk.
+`loadDecompiler({ architecture, wasmUrl?, specsUrl? })` fetches `decompiler.wasm` (2.1 MB, 715 KB gzipped) and the architecture's processor description (`specs/x86-64/`: `x86-64.sla`, 501 KB, and three specification files, 29 KB), by default from beside the package's module through `new URL(…, import.meta.url)`, which bundlers follow and copy. `wasmUrl` and `specsUrl` (a directory) serve them from elsewhere. In Node, `file:` URLs are read from disk.
 
 The only architecture is `'x86-64'`: Ghidra's `x86:LE:64:default` language with its `gcc` compiler specification, the System V calling convention of Linux and the BSDs.
 
@@ -69,6 +73,7 @@ The only architecture is `'x86-64'`: Ghidra's `x86:LE:64:default` language with 
 | `functions` | `{ address, name }`: the entry points the decompiler may start from, and the names it prints for them. At an address named twice, the first name wins. A prototype binds by name, so a PLT stub is named after its symbol (`strcmp`, not `strcmp@plt`). |
 | `data` | `{ address, name, size? }`: global variables, tables and strings' labels. A function's name wins over a data name at its address. |
 | `strings` | `{ address, length }`: string literals, terminator included. A string with a `data` name is typed as a `char` array; any string in read-only memory prints as a literal where a `char *` is expected. |
+| `pointers` | Optional. `{ address, name }`: a pointer-sized slot that holds the address of the function `name`, though the file may not hold it there, such as a GOT entry the dynamic linker fills. A call through the slot is a call of that function, with its name and prototype: `_start`'s `call [rip + __libc_start_main@got]` prints as `__libc_start_main(main,…)`, not `(*pcRam0000000000003fd8)(main,…)`. The function is the image's function of that name, or else one known only by its name, which has no code to decompile. A `data` name at the slot's address names the slot where its value is read (`if (__gmon_start__@got != (code *)0x0)`); without one it prints as the decompiler names a global `code *`. At an address given twice the first is kept, and a function's name at the slot's address wins. |
 | `prototypes` | C declarations of the library functions the program calls and the types they use: see [Prototypes](#prototypes). |
 
 Addresses are numbers: every x86-64 user-space address is below 2^53. `openProgram` throws when the image is malformed (overlapping regions, an address that is not a non-negative safe integer). What it could not use without failing is in `program.warnings`: each declaration that could not be read, with its line (``line 3: Syntax error after `size_tt` (in `size_tt strlen(const char *s);`)``), and any message Ghidra printed.
@@ -81,7 +86,7 @@ The package invents no names. A function or a global the image does not name pri
 
 Each line is `{ text, tokens, addresses }`:
 
-- `tokens`, in order, are `{ start, end, kind, address?, target? }`: where the token is in the line's text (UTF-16 code units, end exclusive, the spaces around it left out), its `kind` from Ghidra's syntax highlighting (`keyword`, `comment`, `type`, `function`, `variable`, `constant` or `syntax`; parameters and globals are variables; punctuation, operators, labels and field names are syntax), the `address` of the instruction its operation came from (for a comment, the address it is attached to), and the `target` a name refers to: a called function's entry, a global's or a string's start, a label's code.
+- `tokens`, in order, are `{ start, end, kind, address?, target? }`: where the token is in the line's text (UTF-16 code units, end exclusive, the spaces around it left out), its `kind` from Ghidra's syntax highlighting (`keyword`, `comment`, `type`, `function`, `variable`, `constant` or `syntax`; parameters and globals are variables; punctuation, operators, labels and field names are syntax), the `address` of the instruction its operation came from (for a comment, the address it is attached to), and the `target` a name refers to: a called function's entry, or the slot of a `pointers` function known only by name; a global's or a string's start; a label's code.
 - `addresses` is the set of the line's tokens' addresses, sorted. A line without one, such as a declaration, has none.
 
 For crackme's `    iVar1 = strcmp(acStack_98,"hunter2");`:

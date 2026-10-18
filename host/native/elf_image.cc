@@ -17,8 +17,12 @@ constexpr uint32_t PF_W = 2;
 constexpr uint32_t SHT_SYMTAB = 2;
 constexpr uint32_t SHT_RELA = 4;
 constexpr uint32_t SHT_DYNSYM = 11;
+constexpr uint8_t STT_NOTYPE = 0;
 constexpr uint8_t STT_OBJECT = 1;
 constexpr uint8_t STT_FUNC = 2;
+constexpr uint8_t STT_GNU_IFUNC = 10;
+constexpr uint32_t R_X86_64_GLOB_DAT = 6;
+constexpr uint32_t R_X86_64_JUMP_SLOT = 7;
 constexpr uint8_t STB_LOCAL = 0;
 constexpr uint8_t STB_GLOBAL = 1;
 constexpr uint8_t STB_WEAK = 2;
@@ -178,6 +182,7 @@ ProgramImage readElfImage(const std::vector<uint8_t> &file) {
   };
   std::vector<DataCandidate> objects;
   std::map<uint64_t, std::string> slotNames;  // GOT slot -> imported symbol
+  std::map<uint64_t, std::string> functionSlots;  // the GOT slots of functions
   for (const Section &section : sections) {
     if (section.type != SHT_SYMTAB && section.type != SHT_DYNSYM) continue;
     for (const Symbol &symbol : readSymbols(in, sections, section)) {
@@ -196,10 +201,16 @@ ProgramImage readElfImage(const std::vector<uint8_t> &file) {
     if (table.type != SHT_SYMTAB && table.type != SHT_DYNSYM) continue;
     std::vector<Symbol> symbols = readSymbols(in, sections, table);
     for (uint64_t at = section.offset; at + 24 <= section.offset + section.size; at += 24) {
-      uint64_t symbolIndex = in.u64(at + 8) >> 32;
+      uint64_t info = in.u64(at + 8);
+      uint64_t symbolIndex = info >> 32;
       if (symbolIndex == 0 || symbolIndex >= symbols.size()) continue;
-      const std::string &name = symbols[symbolIndex].name;
-      if (!name.empty()) slotNames.emplace(in.u64(at), name);
+      const Symbol &symbol = symbols[symbolIndex];
+      if (symbol.name.empty()) continue;
+      slotNames.emplace(in.u64(at), symbol.name);
+      uint32_t type = (uint32_t)info;
+      bool function = symbol.type == STT_FUNC || symbol.type == STT_NOTYPE || symbol.type == STT_GNU_IFUNC;
+      if ((type == R_X86_64_GLOB_DAT || type == R_X86_64_JUMP_SLOT) && function)
+        functionSlots.emplace(in.u64(at), unversioned(symbol.name));
     }
   }
   std::stable_sort(candidates.begin(), candidates.end(), [](const Candidate &a, const Candidate &b) {
@@ -237,6 +248,12 @@ ProgramImage readElfImage(const std::vector<uint8_t> &file) {
   for (DataCandidate &object : objects) {
     taken.insert(object.data.name);
     image.data.push_back(std::move(object.data));
+  }
+  // The GOT slots of functions, named "name@got" as the editor's Listing
+  // names them, each a pointer to its function.
+  for (const auto &[slot, name] : functionSlots) {
+    image.data.push_back({slot, name + "@got", 8});
+    image.pointers.push_back({slot, name});
   }
   for (const Section &section : sections) {
     if (section.name != ".rodata") continue;

@@ -26,11 +26,17 @@ export interface StringRange {
     length: number
 }
 
+export interface Pointer {
+    address: number
+    name: string
+}
+
 export interface ElfImage {
     regions: Region[]
     functions: FunctionName[]
     data: DataName[]
     strings: StringRange[]
+    pointers: Pointer[]
 }
 
 const PT_LOAD = 1
@@ -39,8 +45,12 @@ const PF_W = 2
 const SHT_SYMTAB = 2
 const SHT_RELA = 4
 const SHT_DYNSYM = 11
+const STT_NOTYPE = 0
 const STT_OBJECT = 1
 const STT_FUNC = 2
+const STT_GNU_IFUNC = 10
+const R_X86_64_GLOB_DAT = 6
+const R_X86_64_JUMP_SLOT = 7
 
 interface Section {
     name: string
@@ -67,10 +77,13 @@ interface Symbol {
  * symbol, GLOBAL before WEAK before LOCAL at a shared address, then each PLT
  * stub named after the symbol of the relocation filling its GOT slot. Data:
  * every defined STT_OBJECT symbol without its version (`stdin`), with its
- * size, in the same order, then the strings of `.rodata` (each NUL-terminated
- * run of printable bytes) that have a word in them, named `s_` and their
- * first 24 characters as a word, as the editor's Listing names them.
- * Strings: those runs, their NUL included. */
+ * size, in the same order; then the GOT slot of each function (a GLOB_DAT or
+ * JUMP_SLOT relocation of a function, an ifunc or an untyped symbol), named
+ * `name@got`; then the strings of `.rodata` (each NUL-terminated run of
+ * printable bytes) that have a word in them, named `s_` and their first 24
+ * characters as a word. The slots and strings are named as the editor's
+ * Listing names them. Strings: those runs, their NUL included. Pointers:
+ * those GOT slots, each holding the address of its function. */
 export function readElfImage(file: Uint8Array): ElfImage {
     const view = new DataView(file.buffer, file.byteOffset, file.byteLength)
     const u8 = (at: number) => view.getUint8(at)
@@ -180,15 +193,23 @@ export function readElfImage(file: Uint8Array): ElfImage {
     const functions = candidates.map((candidate) => candidate.function)
 
     const slotNames = new Map<number, string>()
+    const functionSlots = new Map<number, string>()
     for (const section of sections) {
         if (section.type !== SHT_RELA || !isSymbolTable(sections[section.link])) continue
         const symbols = readSymbols(sections[section.link])
         for (let at = section.offset; at + 24 <= section.offset + section.size; at += 24) {
-            const symbolIndex = Number(view.getBigUint64(at + 8, true) >> 32n)
+            const info = view.getBigUint64(at + 8, true)
+            const symbolIndex = Number(info >> 32n)
             if (symbolIndex === 0 || symbolIndex >= symbols.length) continue
-            const name = symbols[symbolIndex].name
+            const symbol = symbols[symbolIndex]
             const slot = u64(at)
-            if (name && !slotNames.has(slot)) slotNames.set(slot, name)
+            if (!symbol.name) continue
+            if (!slotNames.has(slot)) slotNames.set(slot, symbol.name)
+            const type = Number(info & 0xffffffffn)
+            const isFunction =
+                symbol.type === STT_FUNC || symbol.type === STT_NOTYPE || symbol.type === STT_GNU_IFUNC
+            if ((type === R_X86_64_GLOB_DAT || type === R_X86_64_JUMP_SLOT) && isFunction && !functionSlots.has(slot))
+                functionSlots.set(slot, symbol.name.split('@')[0])
         }
     }
     for (const section of sections) {
@@ -208,8 +229,13 @@ export function readElfImage(file: Uint8Array): ElfImage {
 
     objects.sort((a, b) => a.rank - b.rank || a.order - b.order)
     const data = objects.map((object) => object.data)
-    const strings: StringRange[] = []
     const taken = new Set(data.map((entry) => entry.name))
+    const pointers: Pointer[] = []
+    for (const [address, name] of [...functionSlots].sort((a, b) => a[0] - b[0])) {
+        data.push({ address, name: `${name}@got`, size: 8 })
+        pointers.push({ address, name })
+    }
+    const strings: StringRange[] = []
     const printable = (byte: number) => (byte >= 0x20 && byte < 0x7f) || byte === 9 || byte === 10 || byte === 13
     for (const section of sections) {
         if (section.name !== '.rodata') continue
@@ -235,5 +261,5 @@ export function readElfImage(file: Uint8Array): ElfImage {
         }
     }
 
-    return { regions, functions, data, strings }
+    return { regions, functions, data, strings, pointers }
 }

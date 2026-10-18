@@ -51,11 +51,26 @@ export interface ProgramString {
     length: number
 }
 
+/** A pointer-sized slot holding the address of the function named `name`,
+ * whose value the file need not hold: a GOT entry the dynamic linker fills
+ * (`__libc_start_main@got`). A call through the slot is a call of that
+ * function, printed with its name and prototype. The function is the image's
+ * function of that name, or else one known only by name, without code. A
+ * `data` name at the slot's address names the slot itself where its value is
+ * read (`if (__gmon_start__@got != (code *)0x0)`). At an address given twice,
+ * the first is kept; a function at the slot's address wins. */
+export interface ProgramPointer {
+    address: number
+    name: string
+}
+
 export interface ProgramImage {
     regions: ProgramRegion[]
     functions: ProgramFunction[]
     data: ProgramData[]
     strings: ProgramString[]
+    /** Slots holding the addresses of functions; none by default. */
+    pointers?: ProgramPointer[]
     /**
      * C declarations, read by the decompiler's own C parser: prototypes,
      * bound to the functions of the same name (`strcmp` gets `int strcmp(const
@@ -87,7 +102,8 @@ export interface DecompiledToken {
      * the address it is attached to. */
     address?: number
     /** What a name refers to: a function's entry, a global's or string's
-     * start, a label's code. */
+     * start, a label's code. A function known only through a pointer has no
+     * entry: its name refers to the pointer's slot. */
     target?: number
 }
 
@@ -175,7 +191,7 @@ const architectures: Record<Architecture, ArchitectureFiles> = {
 
 const READ_ONLY = 1
 const EXECUTABLE = 2
-const IMAGE_VERSION = 1
+const IMAGE_VERSION = 2
 
 const isAddress = (value: number) => Number.isSafeInteger(value) && value >= 0
 /** A positive whole number the wasm takes as an unsigned 32-bit integer. */
@@ -323,12 +339,17 @@ function encodeImage(image: ProgramImage): { size: number; write: (bytes: Uint8A
     const functions = image.functions.map((fn) => ({ address: fn.address, name: utf8.encode(fn.name) }))
     const data = image.data.map((entry) => ({ ...entry, name: utf8.encode(entry.name) }))
     const strings = image.strings
+    const pointers = (image.pointers ?? []).map((pointer) => ({
+        address: pointer.address,
+        name: utf8.encode(pointer.name)
+    }))
     const prototypes = utf8.encode(image.prototypes)
-    let size = 8 + 16
+    let size = 8 + 20
     for (const region of image.regions) size += 16 + region.bytes.length
     for (const fn of functions) size += 12 + fn.name.length
     for (const entry of data) size += 20 + entry.name.length
     size += 16 * strings.length
+    for (const pointer of pointers) size += 12 + pointer.name.length
     size += 4 + prototypes.length
 
     const write = (bytes: Uint8Array) => {
@@ -373,6 +394,12 @@ function encodeImage(image: ProgramImage): { size: number; write: (bytes: Uint8A
         for (const string of strings) {
             u64(string.address)
             u64(string.length)
+        }
+        u32(pointers.length)
+        for (const pointer of pointers) {
+            u64(pointer.address)
+            u32(pointer.name.length)
+            raw(pointer.name)
         }
         u32(prototypes.length)
         raw(prototypes)

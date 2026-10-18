@@ -24,6 +24,7 @@ scripts/compile_native.sh >/dev/null
 fixtures=js/tests/fixtures
 references=(
     'crackme main'
+    'crackme _start'
 )
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT

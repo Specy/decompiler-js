@@ -152,6 +152,7 @@ bool isStringLiteral(const std::string &text) {
 class LineBuilder {
   Architecture *glb;
   std::deque<RecordingEmit::Reference> &references;
+  const std::map<uint64_t, uint64_t> &aliases;
 
   void newLine(int4 indent) {
     lines.emplace_back();
@@ -207,6 +208,14 @@ class LineBuilder {
     return true;
   }
 
+  /// functionTarget, with the printer's aliases applied.
+  bool aliasedFunctionTarget(const RecordingEmit::Reference &reference, uint64_t &target) const {
+    if (!functionTarget(reference, target)) return false;
+    auto alias = aliases.find(target);
+    if (alias != aliases.end()) target = alias->second;
+    return true;
+  }
+
   MarkupToken token(uint4 element, const std::string &text, uintb color) {
     if (references.empty() || references.front().text != text)
       throw LowlevelError("The markup is out of step with the printer at \"" + text + "\"");
@@ -222,7 +231,8 @@ class LineBuilder {
       token.hasAddress = true;
       token.address = reference.offset;
     }
-    if (element == ELEM_FUNCNAME) token.hasTarget = functionTarget(reference, token.target); else if (element == ELEM_LABEL && reference.space != nullptr) {
+    if (element == ELEM_FUNCNAME) token.hasTarget = aliasedFunctionTarget(reference, token.target);
+    else if (element == ELEM_LABEL && reference.space != nullptr) {
       token.hasTarget = true;
       token.target = reference.offset;
     } else if (element == ELEM_VARIABLE && reference.varnode != nullptr) {
@@ -236,8 +246,9 @@ class LineBuilder {
  public:
   std::vector<MarkupLine> lines{1};
 
-  LineBuilder(Architecture *architecture, std::deque<RecordingEmit::Reference> &recorded)
-      : glb(architecture), references(recorded) {}
+  LineBuilder(Architecture *architecture, std::deque<RecordingEmit::Reference> &recorded,
+              const std::map<uint64_t, uint64_t> &targetAliases)
+      : glb(architecture), references(recorded), aliases(targetAliases) {}
 
   void walk(Decoder &decoder) {
     uint4 element = decoder.openElement();
@@ -293,7 +304,7 @@ DecompiledFunction MarkupPrintC::print(Funcdata *function) {
   std::istringstream input(stream.str());
   PackedDecode decoder(glb);
   decoder.ingestStream(input);
-  LineBuilder builder(glb, recorder->references);
+  LineBuilder builder(glb, recorder->references, aliases);
   builder.walk(decoder);
   if (!recorder->references.empty())
     throw LowlevelError("The markup is out of step with the printer: tokens left over");

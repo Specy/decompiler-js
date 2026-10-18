@@ -64,12 +64,13 @@ void normalize(ProgramImage &image) {
   firstPerAddress(image.functions, [](const FunctionName &f) { return !f.name.empty(); });
   firstPerAddress(image.data, [](const DataName &d) { return !d.name.empty(); });
   firstPerAddress(image.strings, [](const StringRange &s) { return s.length > 0; });
+  firstPerAddress(image.pointers, [](const PointerName &p) { return !p.name.empty(); });
 }
 
 ProgramImage readProgramImage(const uint8_t *bytes, size_t size) {
   BufferReader in(bytes, size);
   if (std::memcmp(in.take(4), "DIMG", 4) != 0) throw std::invalid_argument("Not a program image");
-  if (in.u32() != 1) throw std::invalid_argument("Unsupported program image version");
+  if (in.u32() != 2) throw std::invalid_argument("Unsupported program image version");
   ProgramImage image;
   for (uint32_t n = in.u32(); n > 0; --n) {
     Region region;
@@ -100,6 +101,12 @@ ProgramImage readProgramImage(const uint8_t *bytes, size_t size) {
     string.address = in.u64();
     string.length = in.u64();
     image.strings.push_back(string);
+  }
+  for (uint32_t n = in.u32(); n > 0; --n) {
+    PointerName pointer;
+    pointer.address = in.u64();
+    pointer.name = in.text();
+    image.pointers.push_back(std::move(pointer));
   }
   image.prototypes = in.text();
   if (!in.done()) throw std::invalid_argument("The program image has bytes past its end");

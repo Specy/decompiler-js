@@ -17,10 +17,14 @@ namespace host {
 /// .dynsym, GLOBAL before WEAK before LOCAL at a shared address, then each
 /// PLT stub named after the symbol of the relocation filling its GOT slot.
 /// Data: every defined STT_OBJECT symbol, its version dropped ("stdin"), with
-/// its size, in the same order, then the strings of .rodata, each
+/// its size, in the same order; then the GOT slot of each function (a
+/// GLOB_DAT or JUMP_SLOT relocation of a function, an ifunc or an untyped
+/// symbol), named "name@got"; then the strings of .rodata, each
 /// NUL-terminated run of printable bytes, named "s_" and the first 24
-/// characters as a word (numbered when taken) when there is a word, as the
-/// editor's Listing names them. Strings: those runs, their NUL included.
+/// characters as a word (numbered when taken) when there is a word. The slots
+/// and strings are named as the editor's Listing names them. Strings: those
+/// runs, their NUL included. Pointers: those GOT slots, each holding the
+/// address of its function.
 /// Throws std::runtime_error on a malformed or unsupported file.
 ProgramImage readElfImage(const std::vector<uint8_t> &file);
 

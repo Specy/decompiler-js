@@ -1,5 +1,6 @@
 #include "program.hh"
 
+#include <algorithm>
 #include <chrono>
 #include <map>
 #include <set>
@@ -95,6 +96,43 @@ class HostArchitecture : public SleighArchitecture {
   }
 
   const ImageLoadImage &image() const { return *static_cast<const ImageLoadImage *>(loader); }
+
+  /// Each pointer becomes an external reference at its slot, as Ghidra's Java
+  /// side sends a GOT entry that points at an external function: a value of
+  /// type `code *` that the decompiler resolves to the function at
+  /// slotFunctions gives for its slot when the program calls through it
+  /// (ActionDeindirect),
+  /// whatever the slot's bytes hold. The slot's name is the data name given
+  /// at its address, taken out of data, or else the decompiler's own name for
+  /// a global `code *` there (`pcRam0000000000003fd8`).
+  void addPointers(const std::vector<PointerName> &pointers, const std::map<uint64_t, uint64_t> &slotFunctions,
+                   std::vector<DataName> &data) {
+    Scope *global = symboltab->getGlobalScope();
+    AddrSpace *space = getDefaultDataSpace();
+    std::map<uint64_t, std::string> slotNames;
+    std::vector<DataName> kept;
+    std::set<uint64_t> slots;
+    for (const PointerName &pointer : pointers) slots.insert(pointer.address);
+    for (DataName &entry : data) {
+      if (slots.count(entry.address) == 0) kept.push_back(std::move(entry));
+      else slotNames.emplace(entry.address, std::move(entry.name));
+    }
+    data = std::move(kept);
+    Datatype *codePointer = types->getTypePointer(space->getAddrSize(), types->getTypeCode(), space->getWordSize());
+    for (const PointerName &pointer : pointers) {
+      Address slot(space, pointer.address);
+      if (global->queryFunction(slot) != nullptr) continue;  // the function's name wins
+      auto named = slotNames.find(pointer.address);
+      std::string name;
+      if (named != slotNames.end()) {
+        name = named->second;
+      } else {
+        int4 index = 0;
+        name = global->buildVariableName(slot, Address(), codePointer, index, Varnode::persist);
+      }
+      global->addExternalRef(slot, Address(getDefaultCodeSpace(), slotFunctions.at(pointer.address)), name);
+    }
+  }
 
   /// Each data name becomes a global symbol whose name is locked, as Ghidra's
   /// Java side sends a labelled Data: a string's as an array of char with its
@@ -220,16 +258,48 @@ struct ClearAnalysisAfter {
   }
 }
 
+/// The address of the function each pointer names, by name: the image's
+/// function of that name, or else a placeholder added to the image's functions
+/// past every address the image describes, with no bytes, so that the
+/// prototypes bind to it by name like any function's. Placeholders are 16
+/// bytes apart; their slots are recorded in placeholders.
+std::map<uint64_t, uint64_t> pointedFunctions(ProgramImage &image, std::map<uint64_t, uint64_t> &placeholders) {
+  std::map<std::string, uint64_t> byName;
+  for (const FunctionName &function : image.functions) byName.emplace(function.name, function.address);
+  uint64_t end = 0;
+  for (const Region &region : image.regions) end = std::max(end, region.address + region.bytes.size());
+  for (const FunctionName &function : image.functions) end = std::max(end, function.address + 1);
+  for (const DataName &entry : image.data) end = std::max(end, entry.address + std::max<uint64_t>(entry.size, 1));
+  for (const StringRange &string : image.strings) end = std::max(end, string.address + string.length);
+  for (const PointerName &pointer : image.pointers) end = std::max(end, pointer.address + 8);
+  uint64_t next = (end + 15) & ~(uint64_t)15;
+  std::map<uint64_t, uint64_t> slotFunctions;
+  for (const PointerName &pointer : image.pointers) {
+    auto known = byName.find(pointer.name);
+    if (known == byName.end()) {
+      known = byName.emplace(pointer.name, next).first;
+      image.functions.push_back({next, pointer.name});
+      placeholders.emplace(next, pointer.address);
+      next += 16;
+    }
+    slotFunctions.emplace(pointer.address, known->second);
+  }
+  return slotFunctions;
+}
+
 }  // namespace
 
 Program::Program(ProgramImage image, const std::string &languageId) {
   try {
     normalize(image);
+    std::map<uint64_t, uint64_t> slotFunctions = pointedFunctions(image, placeholders);
     std::vector<DataName> data = std::move(image.data);
     std::vector<StringRange> strings = std::move(image.strings);
+    std::vector<PointerName> pointers = std::move(image.pointers);
     std::string prototypes = std::move(image.prototypes);
     image.data.clear();
     image.strings.clear();
+    image.pointers.clear();
     image.prototypes.clear();
     architecture.reset(new HostArchitecture(std::move(image), languageId, &messages));
     DocumentStorage store;
@@ -240,7 +310,9 @@ Program::Program(ProgramImage image, const std::string &languageId) {
     // protoeval name what the architecture already uses.
     architecture->options->set(ELEM_READONLY.getId(), "on");
     architecture->readLoaderSymbols("::");
+    architecture->addPointers(pointers, slotFunctions, data);
     architecture->addData(data, strings);
+    for (const auto &[placeholder, slot] : placeholders) architecture->markup->aliasTarget(placeholder, slot);
     declarationWarnings = applyDeclarations(*architecture, architecture->organization, prototypes);
   } catch (const std::invalid_argument &error) {
     throw std::runtime_error(error.what());
@@ -266,7 +338,8 @@ DecompiledFunction Program::decompile(uint64_t address, uint32_t maxInstructions
   try {
     architecture->max_instructions = maxInstructions;
     Address entry(architecture->getDefaultCodeSpace(), address);
-    function = architecture->symboltab->getGlobalScope()->queryFunction(entry);
+    function = placeholders.count(address) != 0 ? nullptr
+                                                : architecture->symboltab->getGlobalScope()->queryFunction(entry);
     if (function == nullptr) {
       std::ostringstream message;
       message << "No function starts at 0x" << std::hex << address;

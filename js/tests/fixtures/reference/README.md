@@ -21,11 +21,12 @@ types, the data-types and every symbol), and the console runs `restore`, `option
 The program image is what the driver reads from the ELF (`host/native/elf_image.cc`, mirrored by
 `../../helpers/elf-image.ts`): each `PT_LOAD` segment at its link-time address (read-only unless
 writable); as function names every defined `STT_FUNC` symbol plus the PLT stubs named after
-their relocations' symbols; as data every defined `STT_OBJECT` symbol, without its version, and
-the strings of `.rodata` named `s_` and their first words, as the editor's Listing names them;
-and as prototypes `../prototypes.h`, a few of glibc's declarations. Types print with Ghidra's
+their relocations' symbols; as data every defined `STT_OBJECT` symbol, without its version, the GOT slots of functions
+named `name@got`, and the strings of `.rodata` named `s_` and their first words, as the editor's
+Listing names them; as pointers those GOT slots, each naming its function; and as prototypes `../prototypes.h`, a few of glibc's declarations. Types print with Ghidra's
 names (`undefined8`, `long`, `size_t`).
 
 | File | Produced with |
 | --- | --- |
 | `crackme-main.c` | Ghidra 12.1.4 (8b6bbb857acc), g++ 15.2.0 `-O2`, 2026-10-15 |
+| `crackme-_start.c` | Ghidra 12.1.4 (8b6bbb857acc), g++ 15.2.0 `-O2`, 2026-10-18: the call of `__libc_start_main` through its GOT slot |

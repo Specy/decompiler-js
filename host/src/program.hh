@@ -4,6 +4,7 @@
 #define DECOMPILER_HOST_PROGRAM_HH
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <ostream>
 #include <sstream>
@@ -29,12 +30,18 @@ class HostArchitecture;
 /// One program image under a SleighArchitecture configured as Ghidra's Java
 /// side configures its decompiler process: Ghidra's names for the core types,
 /// read-only memory propagating as constants, the image's functions and data
-/// as named symbols, its strings as character arrays, and its prototypes
-/// bound to its functions by name. Errors from Ghidra surface as
+/// as named symbols, its strings as character arrays, its pointers as
+/// external references to the functions they name, and its prototypes bound
+/// to its functions by name. A function known only through a pointer is
+/// placed past the image's addresses, and its name's target is the pointer's
+/// slot. Errors from Ghidra surface as
 /// std::runtime_error carrying Ghidra's explanation.
 class Program {
   std::ostringstream messages;
   std::vector<std::string> declarationWarnings;
+  /// The placeholder address of each function known only through a pointer,
+  /// and the pointer's slot.
+  std::map<uint64_t, uint64_t> placeholders;
   std::unique_ptr<HostArchitecture> architecture;
 
  public:
