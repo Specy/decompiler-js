@@ -192,6 +192,23 @@ test('prints the names it is given for a stripped program, invented ones include
     }
 })
 
+test('links a function passed as a pointer to the function', async () => {
+    const image = await fixtureImage('hello-atexit-static')
+    const address = (name: string) => image.functions.find((fn) => fn.name === name)!.address
+    const program = decompiler.openProgram(image)
+    try {
+        const main = decompiled(program.decompile(address('main')))
+        // PrintC prints a global reached through its address, as farewell is
+        // here, with no varnode of its own; its name still targets it.
+        const line = lineOf(main, 'atexit(farewell);')
+        const token = (text: string) => line.tokens.find((candidate) => line.text.slice(candidate.start, candidate.end) === text)
+        expect(token('atexit')).toEqual(expect.objectContaining({ kind: 'function', target: address('atexit') }))
+        expect(token('farewell')).toEqual(expect.objectContaining({ kind: 'variable', target: address('farewell') }))
+    } finally {
+        program.dispose()
+    }
+})
+
 test('reports an address where no function starts as an error, not a throw', async () => {
     const image = await fixtureImage('crackme-stripped')
     const program = decompiler.openProgram(image)

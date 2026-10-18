@@ -32,7 +32,8 @@ struct MarkupToken {
   uint64_t address = 0;
   /// The address of what a name refers to: a function's entry (or, for a
   /// function known only through a pointer, the pointer's slot), a global's
-  /// or string's start, a label's code.
+  /// or string's start, a label's code. A global printed as its address or a
+  /// function passed as a pointer refers to its start too.
   bool hasTarget = false;
   uint64_t target = 0;
 };

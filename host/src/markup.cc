@@ -185,6 +185,27 @@ class LineBuilder {
     return true;
   }
 
+  /// The start of the global a PTRSUB off the global space base names, which
+  /// PrintC prints without a varnode: a global's address (`&completed.0`), an
+  /// array or a function passed as a pointer (`__libc_start_main(main,...`).
+  bool spacebaseTarget(const PcodeOp *op, uint64_t &target) const {
+    if (op == nullptr || op->code() != CPUI_PTRSUB) return false;
+    const Varnode *base = op->getIn(0);
+    const Varnode *offset = op->getIn(1);
+    if (!offset->isConstant()) return false;
+    Datatype *type = base->getHighTypeReadFacing(op);
+    if (type->getMetatype() != TYPE_PTR) return false;
+    Datatype *pointed = static_cast<TypePointer *>(type)->getPtrTo();
+    if (pointed->getMetatype() != TYPE_SPACEBASE) return false;
+    Address address =
+        static_cast<TypeSpacebase *>(pointed)->getAddress(offset->getOffset(), base->getSize(), op->getAddr());
+    if (address.getSpace() != glb->getDefaultDataSpace()) return false;  // a stack location is no global
+    target = address.getOffset();
+    SymbolEntry *entry = glb->symboltab->getGlobalScope()->queryContainer(address, 1, Address());
+    if (entry != nullptr) target = entry->getAddr().getOffset();
+    return true;
+  }
+
   /// The entry of the function a function name names. A declaration's and a
   /// function pointer's name come with their Funcdata, a call's with its CALL,
   /// whose first input encodes the call's FuncCallSpecs. (PrintC also prints
@@ -239,6 +260,8 @@ class LineBuilder {
       bool literal = color == Emit::const_color && isStringLiteral(text);
       if (color == Emit::global_color || literal)
         token.hasTarget = dataTarget(reference.varnode, literal, token.target);
+    } else if (element == ELEM_VARIABLE && color == Emit::global_color) {
+      token.hasTarget = spacebaseTarget(reference.op, token.target);
     }
     return token;
   }

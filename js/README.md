@@ -86,7 +86,7 @@ The package invents no names. A function or a global the image does not name pri
 
 Each line is `{ text, tokens, addresses }`:
 
-- `tokens`, in order, are `{ start, end, kind, address?, target? }`: where the token is in the line's text (UTF-16 code units, end exclusive, the spaces around it left out), its `kind` from Ghidra's syntax highlighting (`keyword`, `comment`, `type`, `function`, `variable`, `constant` or `syntax`; parameters and globals are variables; punctuation, operators, labels and field names are syntax), the `address` of the instruction its operation came from (for a comment, the address it is attached to), and the `target` a name refers to: a called function's entry, or the slot of a `pointers` function known only by name; a global's or a string's start; a label's code.
+- `tokens`, in order, are `{ start, end, kind, address?, target? }`: where the token is in the line's text (UTF-16 code units, end exclusive, the spaces around it left out), its `kind` from Ghidra's syntax highlighting (`keyword`, `comment`, `type`, `function`, `variable`, `constant` or `syntax`; parameters and globals are variables, a function passed as a pointer too; punctuation, operators, labels and field names are syntax), the `address` of the instruction its operation came from (for a comment, the address it is attached to), and the `target` a name refers to: a called function's entry, or the slot of a `pointers` function known only by name; a global's or a string's start, whether it is read or its address taken (`&completed.0`, `main` passed to `__libc_start_main`); a label's code.
 - `addresses` is the set of the line's tokens' addresses, sorted. A line without one, such as a declaration, has none.
 
 For crackme's `    iVar1 = strcmp(acStack_98,"hunter2");`:

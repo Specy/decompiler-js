@@ -11,6 +11,7 @@ import { readElfImage } from './helpers/elf-image'
 const specsUrl = new URL('../../specs/x86-64/', import.meta.url)
 const fixture = (name: string) => new URL(`./fixtures/${name}`, import.meta.url)
 
+const MAIN = 0x11e9
 const LIBC_START_MAIN_SLOT = 0x3fd8
 const GMON_START_SLOT = 0x3fe8
 const CXA_FINALIZE_STUB = 0x1090
@@ -71,6 +72,8 @@ test('a call through a slot is a call of its function, with that function’s pr
     expect(tokenOf(start, '__libc_start_main')).toEqual(
         expect.objectContaining({ kind: 'function', target: LIBC_START_MAIN_SLOT })
     )
+    // A function passed as a pointer is a global variable to Ghidra's highlighting.
+    expect(tokenOf(start, 'main')).toEqual(expect.objectContaining({ kind: 'variable', target: MAIN }))
 })
 
 test('is the native reference, which Ghidra’s own console agrees with', async () => {
