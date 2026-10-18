@@ -82,7 +82,7 @@ The package invents no names. A function or a global the image does not name pri
 
 ### Decompiling
 
-`program.decompile(address, options?)` returns the C of the function starting at `address`, one of the image's functions, as `{ address, name, text, lines }`, or `{ address, error }` when there is none: no function starts there, it is past a guard below, or the decompiler failed. It throws only when the program was disposed or an argument is not a number it takes.
+`program.decompile(address, options?)` returns the C of the function starting at `address`, one of the image's functions, as `{ address, name, text, lines }`, or `{ address, error }` when there is none: no function starts there, it is past a guard below, or the decompiler failed. It throws only when the program was disposed or an argument is not a number it takes. A bug in Ghidra's code that traps the WebAssembly module (a division by zero) throws too, a `WebAssembly.RuntimeError`; nothing in the module can be trusted after one, so dispose the decompiler and load a new one.
 
 Each line is `{ text, tokens, addresses }`:
 

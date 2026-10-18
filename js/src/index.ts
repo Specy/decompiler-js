@@ -142,8 +142,10 @@ export interface DecompiledProgram {
      * functions, or the reason there is none (no function starts there, it
      * has more instructions than `maxInstructions`, it took longer than
      * `timeLimitMs`, or the decompiler failed). Throws only when the program
-     * was disposed or an argument is not a number it takes. The call blocks
-     * the thread it runs on until it returns: run it in a worker. */
+     * was disposed or an argument is not a number it takes, or with a
+     * `WebAssembly.RuntimeError` when a bug in Ghidra's code traps the module,
+     * after which a new decompiler must be loaded. The call blocks the thread
+     * it runs on until it returns: run it in a worker. */
     decompile(address: number, options?: DecompileOptions): DecompiledFunction
     /** Frees the program's copy of the image and everything decompiled. */
     dispose(): void

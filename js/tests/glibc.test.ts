@@ -213,3 +213,25 @@ test("crackme's main reads as with the reference's own declarations", async () =
         program.dispose()
     }
 })
+
+test('decompiles a function storing through a pointer to an incomplete structure', async () => {
+    // glibc.h declares DIR as glibc's headers do, `typedef struct __dirstream DIR;`, never
+    // defining it: a structure of size 0. Static glibc's opendir fills the DIR it allocates,
+    // which divided by that size (patches/0003-split-incomplete-structure.patch) and trapped.
+    const image = readElfImage(new Uint8Array(await readFile(fixture('elf/hello-atexit-static'))))
+    const opendir = image.functions.find((fn) => fn.name === 'opendir')!.address
+    // The symbol table names the address __opendir first; the prototype binds opendir.
+    const program = decompiler.openProgram({
+        ...image,
+        functions: [{ address: opendir, name: 'opendir' }, ...image.functions],
+        prototypes: glibc
+    })
+    try {
+        const result = program.decompile(opendir)
+        if ('error' in result) throw new Error(result.error)
+        expect(result.lines[0].text).toBe('DIR * opendir(char *name)')
+        expect(result.text).toMatch(/\bpDVar\d+ = malloc\(/)
+    } finally {
+        program.dispose()
+    }
+})

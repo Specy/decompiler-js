@@ -1,0 +1,26 @@
+Why: SplitDatatype, which splits a STORE or COPY of a composite into its
+fields, backs its root pointer up to a pointer to the containing structure
+(RootPointer::backUpPointer) and then builds the field pointers from that
+structure's layout (buildPointers), reducing an offset past its end modulo
+its size. An incomplete structure has size 0: a struct the prototypes refer
+to by tag without defining it, such as glibc's DIR (`typedef struct
+__dirstream DIR;`, opaque in glibc's own headers). A function storing
+through a DIR * (static glibc's opendir) then divides by zero: SIGFPE
+natively, and a "remainder by zero" trap in the wasm, after which the
+module's state cannot be trusted. This refuses to back up to a pointer to a type of size 0, so the
+split stays at the stored value's own pointer. It cannot be done in host/:
+the type must stay incomplete for the prototypes to print it by name.
+Upstream: not reported yet; upstream's master (2026-10-18) divides the
+same way in SplitDatatype::buildPointers.
+
+--- a/cpp/subflow.cc
++++ b/cpp/subflow.cc
+@@ -2119,6 +2119,8 @@
+   if (ct->getMetatype() != TYPE_PTR)
+     return false;
+   Datatype *parent = ((TypePointer *)ct)->getPtrTo();
++  if (parent->getSize() == 0)	// An incomplete structure has no layout to split by (decompiler-js patch)
++    return false;
+   type_metatype meta = parent->getMetatype();
+   if (meta != TYPE_STRUCT && meta != TYPE_ARRAY) {
+     if ((opc != CPUI_PTRADD && opc != CPUI_COPY) || parent != impliedBase)

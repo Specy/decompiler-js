@@ -2,10 +2,13 @@
 // through the host layer, as the wasm build does, so the two can be compared.
 //
 //   decompile [--prototypes <file.h>] [--save <file.xml>] [--repeat <n>] [--json]
-//             [--max-instructions <n>] [--time-limit <ms>]
+//             [--max-instructions <n>] [--time-limit <ms>] [--image]
 //             <spec directory> <elf> <function name or 0xaddress>
 //
-// Prints the C to stdout, and the times and warnings to stderr. --json prints
+// Prints the C to stdout, and the times and warnings to stderr. --image reads
+// a program image in the binary form the wasm's program_open takes
+// (host/src/program_image.hh) instead of an ELF, prototypes included, to
+// decompile natively what a caller of the package passed it. --json prints
 // the result as the wasm's program_decompile returns it instead: the lines
 // with their tokens' kinds, addresses and targets. --prototypes passes a file
 // of C declarations with the program image. --save also writes the
@@ -44,12 +47,14 @@ int main(int argc, char **argv) {
   std::string savePath, prototypesPath;
   int repeat = 1;
   bool json = false;
+  bool imageFile = false;
   uint32_t maxInstructions = host::Program::DEFAULT_MAX_INSTRUCTIONS;
   uint32_t timeLimitMs = host::Program::DEFAULT_TIME_LIMIT_MS;
   int i = 1;
   for (; i < argc && argv[i][0] == '-'; ++i) {
     std::string option = argv[i];
     if (option == "--json") json = true;
+    else if (option == "--image") imageFile = true;
     else if (i + 1 == argc) break;
     else if (option == "--save") savePath = argv[++i];
     else if (option == "--prototypes") prototypesPath = argv[++i];
@@ -60,14 +65,17 @@ int main(int argc, char **argv) {
   }
   if (argc - i != 3) {
     std::cerr << "usage: decompile [--prototypes <file.h>] [--save <file.xml>] [--repeat <n>] [--json] "
-                 "[--max-instructions <n>] [--time-limit <ms>] <spec directory> <elf> <function name or 0xaddress>\n";
+                 "[--max-instructions <n>] [--time-limit <ms>] [--image] <spec directory> <elf> "
+                 "<function name or 0xaddress>\n";
     return 2;
   }
   std::string specDirectory = argv[i], elfPath = argv[i + 1], target = argv[i + 2];
 
   try {
     std::string elf = readFile(elfPath);
-    host::ProgramImage image = host::readElfImage(std::vector<uint8_t>(elf.begin(), elf.end()));
+    host::ProgramImage image =
+        imageFile ? host::readProgramImage(reinterpret_cast<const uint8_t *>(elf.data()), elf.size())
+                  : host::readElfImage(std::vector<uint8_t>(elf.begin(), elf.end()));
     if (!prototypesPath.empty()) image.prototypes = readFile(prototypesPath);
 
     uint64_t address = 0;
