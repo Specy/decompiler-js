@@ -29,6 +29,7 @@ patch that changes the output fails those tests rather than passing unnoticed.
 | `0001-action-checkpoint.patch` | Adds `Action::checkpoint`, a hook called before each attempt to apply an action, null by default, which the host layer sets to enforce a decompilation's time limit (`host/src/program.cc`). |
 | `0002-sleigh-resume.patch` | Adds `Sleigh::resume`, which points the translator every program of a language shares back at a program opened earlier, so that several programs can be open at once (`HostArchitecture::useTranslator`). |
 | `0003-split-incomplete-structure.patch` | Stops `SplitDatatype` backing a pointer up to an incomplete structure (size 0, such as glibc's `DIR`), whose layout it would divide by: static glibc's `opendir` trapped the wasm with "remainder by zero". |
+| `0004-flow-unmapped-bytes.patch` | Stops a function's flow at the first unmapped byte with `halt_baddata()`, as at bad instruction data, instead of failing the whole function: a program ending with Linux's exit system call runs on past its segment's last byte. A function whose entry is unmapped still fails. |
 
 Ghidra 12.1.4 otherwise builds with Emscripten unchanged: the specification files are read
 through `ifstream` and the `.ldefs` directory is scanned with `opendir`, both of which

@@ -1,0 +1,40 @@
+Why: A function whose flow runs past the last mapped byte fails whole, with
+"Bytes at ram:0x... are not mapped": FlowInfo::processInstruction stops the
+flow at an undecodable instruction (BadDataError) with halt_baddata(), but a
+DataUnavailError from the load image propagates out of the decompilation. Any
+program ending with Linux's exit system call does this, since the decompiler
+cannot know that syscall does not return: flow continues after it, past the
+end of its segment, as in the smallest x86-64 programs written by hand. Ghidra
+behaves the same when its own load image has no bytes there ("GHIDRA has no
+data in the loadimage"). This stops the flow at the first unmapped byte as at
+bad instruction data, with warnings of its own; a function whose entry is
+unmapped still fails, having nothing to decompile. It cannot be done in host/:
+the load image cannot tell an instruction's bytes from data the analysis reads
+(jump tables, constant pointers), whose callers catch DataUnavailError
+themselves.
+Upstream: not reported; 12.1.4's FlowInfo::processInstruction catches only
+UnimplError and BadDataError.
+
+--- a/cpp/flow.cc
++++ b/cpp/flow.cc
+@@ -455,6 +455,20 @@
+       }
+     }
+   }
++  catch(DataUnavailError &err) {	// Flow ran into bytes nothing maps (decompiler-js patch)
++    if ((flags & error_unimplemented)!=0 || curaddr == data.getAddress())
++      throw err;		// rethrow: a function whose entry is unmapped has nothing to decompile
++    else {
++      // Stop the flow there, as at bad instruction data
++      step = 1;			// Pretend size 1
++      artificialHalt(curaddr,PcodeOp::badinstruction);
++      data.warning("Unmapped bytes - Truncating control flow here",curaddr);
++      if (!hasBadData()) {
++	flags |= baddata_present;
++	data.warningHeader("Control flow encountered unmapped bytes");
++      }
++    }
++  }
+   VisitStat &stat(visited[curaddr]); // Mark that we visited this instruction
+   stat.size = step;		// Record size of instruction
+ 
