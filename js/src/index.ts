@@ -150,6 +150,48 @@ export interface DecompiledToken {
      * start, a label's code. A function known only through a pointer has no
      * entry: its name refers to the pointer's slot. */
     target?: number
+    /** For the name of one of the function's local variables or parameters,
+     * its `id` in the function's `variables`. A global has a `target`
+     * instead. */
+    variable?: string
+    /** For a comment's token: `'user'` for one the caller gave (`comments`,
+     * `functionComment`), `'warning'` for one the decompiler wrote
+     * (`WARNING: ...`, and the heading of the comments it could not place). */
+    comment?: 'user' | 'warning'
+}
+
+/** A local variable or parameter of a decompiled function. */
+export interface DecompiledVariable {
+    /** The decompiler's identity for the variable, from where Ghidra keeps
+     * it, to give back in `DecompileOptions.locals`; an opaque string, the
+     * same for the same bytes whatever was decompiled before and wherever
+     * the program is placed:
+     * - `stack:-0x98`, a variable tied to a stack location, by its offset;
+     * - `register:0x0:4@+0x8e`, the storage, its size and the variable's
+     *   first use as an offset from the function's entry (`@-0x1` for a
+     *   parameter, the entry less one, as Ghidra writes it);
+     * - `join(register:0x10:8+register:0x0:8):16@+0x19b`, a value split
+     *   across registers, by its pieces;
+     * - `hash:0x3f276f9932@+0x27c`, a temporary, by Ghidra's hash of its
+     *   data-flow and where it is used, and any variable its storage would
+     *   not tell apart.
+     *
+     * A stack id survives almost any change of the function's bytes; a
+     * register id lasts while the instruction setting it does; a hash is the
+     * most fragile, and changes with the code around the temporary. */
+    id: string
+    kind: 'local' | 'parameter'
+    /** The name printed: the decompiler's (`iVar1`, `acStack_98`,
+     * `param_1`), or the one `locals` gave it. */
+    name: string
+    /** Where Ghidra keeps it, as Ghidra writes storage: a register (`EAX`),
+     * a stack location (`Stack[-0x98]`), the registers a value is split
+     * across, most significant first (`RDX:RAX`), or a temporary's hash
+     * (`HASH:3f276f9932`). */
+    storage: string
+    /** A parameter named by a C declaration of `prototypes` (`s` in `int
+     * puts(char *s)`): a name for it in `locals` is not applied. */
+    locked?: true
 }
 
 export interface DecompiledLine {
@@ -161,10 +203,28 @@ export interface DecompiledLine {
 }
 
 /** `name` is the function's name as the image gave it, without its
- * namespaces. */
+ * namespaces; `variables` are the local variables and parameters its tokens
+ * name, in the order first named. */
 export type DecompiledFunction =
-    | { address: number; name: string; text: string; lines: DecompiledLine[] }
+    | { address: number; name: string; text: string; lines: DecompiledLine[]; variables: DecompiledVariable[] }
     | { address: number; error: string }
+
+/** A name for one of the function's local variables or parameters, by the
+ * `id` a decompilation reported for it. */
+export interface LocalName {
+    id: string
+    /** Printed as given, so a C identifier; made unique in the function
+     * (`count_00` beside another `count`). */
+    name: string
+}
+
+/** A comment at an instruction of the function. */
+export interface LineComment {
+    address: number
+    /** Printed as given, each line break starting a new line of the comment,
+     * each `*\/` written `* /`. An empty text adds nothing. */
+    text: string
+}
 
 export interface DecompileOptions {
     /** The most instructions the decompiler follows before giving up with an
@@ -177,6 +237,24 @@ export interface DecompileOptions {
      * time between the steps of its analysis, so it stops a little after the
      * limit rather than on it. */
     timeLimitMs?: number
+    /** Names for the function's local variables and parameters, by their
+     * ids, applied after the analysis, so the code and every other name read
+     * as without them. An id naming no variable of this decompilation (the
+     * bytes changed) is ignored, as is a name for a `locked` parameter. */
+    locals?: readonly LocalName[]
+    /** Comments, each printed before the statement whose code holds its
+     * address, as Ghidra places a PRE comment; several at one address in
+     * the order given, before the decompiler's warnings there. */
+    comments?: readonly LineComment[]
+    /** A comment printed above the function's declaration, Ghidra's plate
+     * comment, before the decompiler's own warnings there. */
+    functionComment?: string
+    /** Lists the comments that no statement holds the address of (an
+     * instruction without p-code, such as an `endbr64`, code the decompiler
+     * found dead, or an address outside the function) above the function,
+     * under Ghidra's heading "Comments that could not be placed in the
+     * function body:"; by default they are left out, as in Ghidra. */
+    unplacedComments?: boolean
 }
 
 export interface DecompiledProgram {
@@ -189,7 +267,8 @@ export interface DecompiledProgram {
      * functions, or the reason there is none (no function starts there, it
      * has more instructions than `maxInstructions`, it took longer than
      * `timeLimitMs`, or the decompiler failed). Throws only when the program
-     * was disposed or an argument is not a number it takes, or with a
+     * was disposed or an argument is not one it takes (a `RangeError` for a
+     * malformed variable id or an empty name in `locals`), or with a
      * `WebAssembly.RuntimeError` when a bug in Ghidra's code traps the module,
      * after which a new decompiler must be loaded. The call blocks the thread
      * it runs on until it returns: run it in a worker. */
@@ -241,11 +320,27 @@ const architectures: Record<Architecture, ArchitectureFiles> = {
 const READ_ONLY = 1
 const EXECUTABLE = 2
 const IMAGE_VERSION = 3
+const ANNOTATIONS_VERSION = 1
 const NAMESPACE_STRATEGIES: readonly NamespaceStrategy[] = ['minimal', 'all', 'none']
 
 const isAddress = (value: number) => Number.isSafeInteger(value) && value >= 0
 /** A positive whole number the wasm takes as an unsigned 32-bit integer. */
 const isCount = (value: number) => Number.isInteger(value) && value > 0 && value <= 0xffffffff
+
+// A variable id (DecompiledVariable.id, host/src/markup.hh variableId): a
+// storage (a space and an offset, a stack offset signed, or a join's pieces
+// with their sizes), then its size and first use from the entry unless it is
+// tied to its storage; or a hash and its use.
+const HEX = '0x[0-9a-f]+'
+const STORAGE = `(?!hash:)[A-Za-z_][A-Za-z0-9_]*:-?${HEX}`
+const PIECE = `${STORAGE}:[1-9][0-9]*`
+const USE = `@[+-]${HEX}`
+const VARIABLE_ID = new RegExp(
+    `^(?:hash:${HEX}${USE}|(?:${STORAGE}|join\\(${PIECE}(?:\\+${PIECE})+\\))(?::[1-9][0-9]*${USE})?)$`
+)
+/** Ghidra's comment types of the decompiler's own comments (comment.hh:
+ * warning, warningheader); a caller's are user2 and header. */
+const WARNING_COMMENTS = 16 | 32
 
 // Ghidra's defaults (DecompileOptions: SUGGESTED_MAX_INSTRUCTIONS,
 // SUGGESTED_DECOMPILE_TIMEOUT_SECS).
@@ -325,7 +420,28 @@ export async function loadDecompiler(options: LoadDecompilerOptions): Promise<De
                     if (!isCount(maxInstructions)) throw new RangeError(`Not an instruction count: ${maxInstructions}`)
                     const timeLimitMs = options?.timeLimitMs ?? DEFAULT_TIME_LIMIT_MS
                     if (!isCount(timeLimitMs)) throw new RangeError(`Not a time limit in milliseconds: ${timeLimitMs}`)
-                    const json = module._program_decompile(handle, address, maxInstructions, timeLimitMs)
+                    const annotations = options && encodeAnnotations(options)
+                    let json: number
+                    if (!annotations) {
+                        json = module._program_decompile(handle, address, maxInstructions, timeLimitMs)
+                    } else {
+                        const pointer = module._malloc(annotations.length)
+                        if (pointer === 0) throw new Error('Out of memory for the annotations')
+                        try {
+                            // HEAPU8 is read after _malloc, which may have grown the memory.
+                            module.HEAPU8.set(annotations, pointer)
+                            json = module._program_decompile_annotated(
+                                handle,
+                                address,
+                                maxInstructions,
+                                timeLimitMs,
+                                pointer,
+                                annotations.length
+                            )
+                        } finally {
+                            module._free(pointer)
+                        }
+                    }
                     try {
                         return decodeFunction(module.UTF8ToString(json))
                     } finally {
@@ -353,8 +469,63 @@ export async function loadDecompiler(options: LoadDecompilerOptions): Promise<De
     }
 }
 
-type RawToken = [text: string, kind: number, address: number, target: number]
-type RawFunction = { address: number; name: string; lines: RawToken[][] } | { address: number; error: string }
+type RawToken = [text: string, kind: number, address: number, target: number, variable?: number, comment?: number]
+type RawFunction =
+    | { address: number; name: string; lines: RawToken[][]; variables: DecompiledVariable[] }
+    | { address: number; error: string }
+
+/** The options' annotations in the form host/wasm/exports.cc reads
+ * (readAnnotations), or undefined when they add nothing, for which the
+ * plain program_decompile is called. */
+function encodeAnnotations(options: DecompileOptions): Uint8Array | undefined {
+    const { locals = [], comments = [], functionComment = '', unplacedComments = false } = options
+    if (locals.length === 0 && comments.length === 0 && functionComment === '' && !unplacedComments) return undefined
+    const utf8 = new TextEncoder()
+    const names = locals.map(({ id, name }) => {
+        if (typeof id !== 'string' || !VARIABLE_ID.test(id)) throw new RangeError(`Not a variable id: ${id}`)
+        if (typeof name !== 'string' || name === '') throw new RangeError(`An empty name for the variable ${id}`)
+        return [utf8.encode(id), utf8.encode(name)] as const
+    })
+    const texts = comments.map(({ address, text }) => {
+        if (!isAddress(address)) throw new RangeError(`Not an address: ${address}`)
+        if (typeof text !== 'string') throw new TypeError(`Not a comment's text: ${text}`)
+        return { address, text: utf8.encode(text) }
+    })
+    if (typeof functionComment !== 'string') throw new TypeError(`Not a comment's text: ${functionComment}`)
+    const header = utf8.encode(functionComment)
+    let size = 4 + 4 + 4 + 4 + 4 + header.length + 4
+    for (const [id, name] of names) size += 8 + id.length + name.length
+    for (const comment of texts) size += 12 + comment.text.length
+    const bytes = new Uint8Array(size)
+    const view = new DataView(bytes.buffer)
+    let at = 0
+    const u32 = (value: number) => {
+        view.setUint32(at, value, true)
+        at += 4
+    }
+    const text = (chunk: Uint8Array) => {
+        u32(chunk.length)
+        bytes.set(chunk, at)
+        at += chunk.length
+    }
+    bytes.set(utf8.encode('DANN'))
+    at = 4
+    u32(ANNOTATIONS_VERSION)
+    u32(names.length)
+    for (const [id, name] of names) {
+        text(id)
+        text(name)
+    }
+    u32(texts.length)
+    for (const comment of texts) {
+        view.setBigUint64(at, BigInt(comment.address), true)
+        at += 8
+        text(comment.text)
+    }
+    text(header)
+    u32(unplacedComments ? 1 : 0)
+    return bytes
+}
 
 /** program_decompile's JSON (host/wasm/exports.cc) as a DecompiledFunction.
  * The printer gives each namespace of a qualified name as a piece of its own,
@@ -381,7 +552,7 @@ function decodeFunction(json: string): DecompiledFunction {
             if (lineEnd) unfinished.push({ token, line: index })
             run = undefined
         }
-        for (const [piece, kind, address, target] of pieces) {
+        for (const [piece, kind, address, target, variable, comment] of pieces) {
             const at = text.length
             text += piece
             // A token covers its piece's text without the spaces around it
@@ -407,6 +578,8 @@ function decodeFunction(json: string): DecompiledFunction {
                 addresses.add(address)
             }
             if (target >= 0) token.target = target
+            if (variable !== undefined && variable >= 0) token.variable = raw.variables[variable].id
+            if (comment) token.comment = comment & WARNING_COMMENTS ? 'warning' : 'user'
             tokens.push(token)
         }
         endRun(true)
@@ -417,7 +590,13 @@ function decodeFunction(json: string): DecompiledFunction {
         const next = lines[line + 1]?.tokens[0]
         if (next && next.kind !== 'syntax' && next.kind !== 'comment') token.kind = next.kind
     }
-    return { address: raw.address, name: raw.name, text: lines.map((line) => line.text).join('\n'), lines }
+    return {
+        address: raw.address,
+        name: raw.name,
+        text: lines.map((line) => line.text).join('\n'),
+        lines,
+        variables: raw.variables
+    }
 }
 
 /** A function's, data's or pointer's name, namespaces and symbol, encoded. */

@@ -3,7 +3,8 @@
 # against, js/tests/fixtures/reference/<fixture>-<function>.c, and checks each
 # against Ghidra's own console given the same program image. Beside each, the
 # driver's JSON result (<fixture>-<function>.json: the lines' tokens with
-# their kinds, addresses and targets), which the console cannot give.
+# their kinds, addresses, targets, variables and comment types, and the
+# function's variables with their ids), which the console cannot give.
 #
 #   scripts/native_reference.sh
 #

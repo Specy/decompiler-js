@@ -6,8 +6,9 @@ The first release. Ghidra's C++ decompiler, from Ghidra 12.1.4
 (`Ghidra_12.1.4_build`, commit 8b6bbb857acc), compiled to WebAssembly with
 emsdk 6.0.9: the caller describes a program in memory and gets a function's
 C as Ghidra prints it, as lines of tokens linked to the instructions they come
-from and to the functions and data they name, in a browser or in Node,
-without Java, a server or files. The wasm is 2.1 MB (719 KB gzipped) and the
+from and to the functions, data and local variables they name, with the
+caller's names for the locals and its comments, in a browser or in Node,
+without Java, a server or files. The wasm is 2.2 MB (726 KB gzipped) and the
 x86-64 processor description 530 KB.
 
 - `loadDecompiler({ architecture, wasmUrl?, specsUrl? })` loads the module
@@ -37,18 +38,43 @@ x86-64 processor description 530 KB.
   itself decompiles. `namespaces`, Ghidra's namespace strategy, qualifies a
   name as far as tells it apart where it is used (`'minimal'`, the default),
   in full (`'all'`) or never (`'none'`).
-- `program.decompile(address, { maxInstructions?, timeLimitMs? })` returns
-  `{ address, name, text, lines }` or `{ address, error }`. The guards
+- `program.decompile(address, { maxInstructions?, timeLimitMs?, locals?,
+  comments?, functionComment?, unplacedComments? })` returns
+  `{ address, name, text, lines, variables }` or `{ address, error }`. The guards
   default to Ghidra's 100,000 instructions and 30 seconds; the time is
   checked inside the module, so a call returns shortly after its limit. It
   throws only on a disposed program, an argument it does not take, or a
   `WebAssembly.RuntimeError` when Ghidra's code traps the module.
 - Each line is `{ text, tokens, addresses }`; a token is
-  `{ start, end, kind, address?, target? }`, with its span in UTF-16 code
-  units, its kind from Ghidra's syntax highlighting, the address of the
-  instruction it came from, and the entry, global, string or label a name
-  refers to; a qualified name (`std::string::operator+=`) is one token. A
-  line's `addresses` are its tokens', sorted, each once.
+  `{ start, end, kind, address?, target?, variable?, comment? }`, with its
+  span in UTF-16 code units, its kind from Ghidra's syntax highlighting, the
+  address of the instruction it came from, the entry, global, string or
+  label a name refers to, the id of the local variable or parameter it
+  names, and for a comment's word whether the comment is the caller's
+  (`'user'`) or the decompiler's (`'warning'`); a qualified name
+  (`std::string::operator+=`) is one token. A line's `addresses` are its
+  tokens', sorted, each once.
+- Variables and annotations: `variables` lists the local variables and
+  parameters the tokens name, each `{ id, kind, name, storage, locked? }`.
+  The id is the decompiler's identity for the variable, from Ghidra's
+  storage for it: `stack:-0x98`, `register:0x0:4@+0x8e` (storage, size and
+  first use as an offset from the entry, `@-0x1` for a parameter),
+  `join(register:0x10:8+register:0x0:8):16@+0x19b`, or
+  `hash:0x3f276f9932@+0x27c` for a temporary; the same bytes give the same
+  ids whatever was decompiled before and wherever the program is placed.
+  `locals` names variables by id after the decompiler's analysis, so the
+  code and every other name print as without them; an id naming no
+  variable is ignored, a parameter named by a declaration (`locked`) keeps
+  its name, and a malformed id or an empty name is a `RangeError`.
+  `comments` (`{ address, text }`) go into Ghidra's comment database as PRE
+  comments, printed before the statement whose code holds each address and
+  above the decompiler's warnings there, `*/` written `* /`;
+  `functionComment` is the plate comment above the declaration; and
+  `unplacedComments` lists the comments no statement holds under Ghidra's
+  "Comments that could not be placed in the function body:", where by
+  default they are left out. Nothing is kept between calls, and a call
+  without these options decompiles as before them; the program image's
+  format is unchanged.
 - Several programs can be open at once. `program.dispose()` frees one,
   `decompiler.dispose()` all of them; a decompilation keeps nothing once it
   returns. `decompiler.memory()` reports the wasm memory's size and the part

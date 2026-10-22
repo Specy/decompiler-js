@@ -61,7 +61,7 @@ undefined8 main(void)
 
 ### Loading
 
-`loadDecompiler({ architecture, wasmUrl?, specsUrl? })` fetches `decompiler.wasm` (2.1 MB, 719 KB gzipped) and the architecture's processor description (`specs/x86-64/`: `x86-64.sla`, 501 KB, and three specification files, 29 KB), by default from beside the package's module through `new URL(…, import.meta.url)`, which bundlers follow and copy. `wasmUrl` and `specsUrl` (a directory) serve them from elsewhere. In Node, `file:` URLs are read from disk.
+`loadDecompiler({ architecture, wasmUrl?, specsUrl? })` fetches `decompiler.wasm` (2.2 MB, 726 KB gzipped) and the architecture's processor description (`specs/x86-64/`: `x86-64.sla`, 501 KB, and three specification files, 29 KB), by default from beside the package's module through `new URL(…, import.meta.url)`, which bundlers follow and copy. `wasmUrl` and `specsUrl` (a directory) serve them from elsewhere. In Node, `file:` URLs are read from disk.
 
 The only architecture is `'x86-64'`: Ghidra's `x86:LE:64:default` language with its `gcc` compiler specification, the System V calling convention of Linux and the BSDs.
 
@@ -113,26 +113,78 @@ A name prints qualified as far as the strategy says. With `'minimal'`, as far as
 
 and inside another member of `std::vector<std::string>`, `uStack_30 = size(uStack_40);` and `__throw_length_error(param_3);`; a function's own declaration reads `ulong std::vector<std::string>::_M_check_len(undefined8 param_1,ulong param_2,char *param_3)`. With `'all'`, every name in full unless it is in the scope where it is used (`std::vector<std::string>::size(uStack_40)` there); with `'none'`, never qualified, its declaration included (`ulong _M_check_len(…)`).
 
-The package invents no names. A function or a global the image does not name prints as the decompiler names it (`func_0x00401130()`, `cRam0000000000004018`), and locals and parameters keep the decompiler's names (`iVar1`, `acStack_98`, `param_1`). The Ghidra application's `local_98` comes from a stack analysis on its Java side, which is not part of the decompiler. Types print with Ghidra's names (`undefined8`, `uint`, `ulong`).
+The package invents no names. A function or a global the image does not name prints as the decompiler names it (`func_0x00401130()`, `cRam0000000000004018`), and locals and parameters keep the decompiler's names (`iVar1`, `acStack_98`, `param_1`) unless the caller names them ([Naming variables and adding comments](#naming-variables-and-adding-comments)). The Ghidra application's `local_98` comes from a stack analysis on its Java side, which is not part of the decompiler. Types print with Ghidra's names (`undefined8`, `uint`, `ulong`).
 
 ### Decompiling
 
-`program.decompile(address, options?)` returns the C of the function starting at `address`, one of the image's functions, as `{ address, name, text, lines }` (`name` as the image gives it, without its namespaces), or `{ address, error }` when there is none: no function starts there, it is past a guard below, or the decompiler failed. It throws only when the program was disposed or an argument is not a number it takes. A bug in Ghidra's code that traps the WebAssembly module (a division by zero) throws too, a `WebAssembly.RuntimeError`; nothing in the module can be trusted after one, so dispose the decompiler and load a new one.
+`program.decompile(address, options?)` returns the C of the function starting at `address`, one of the image's functions, as `{ address, name, text, lines, variables }` (`name` as the image gives it, without its namespaces; `variables` [below](#naming-variables-and-adding-comments)), or `{ address, error }` when there is none: no function starts there, it is past a guard below, or the decompiler failed. It throws only when the program was disposed or an argument is not one it takes. A bug in Ghidra's code that traps the WebAssembly module (a division by zero) throws too, a `WebAssembly.RuntimeError`; nothing in the module can be trusted after one, so dispose the decompiler and load a new one.
 
 Each line is `{ text, tokens, addresses }`:
 
-- `tokens`, in order, are `{ start, end, kind, address?, target? }`: where the token is in the line's text (UTF-16 code units, end exclusive, the spaces around it left out), its `kind` from Ghidra's syntax highlighting (`keyword`, `comment`, `type`, `function`, `variable`, `constant` or `syntax`; parameters and globals are variables, a function passed as a pointer too; punctuation, operators, labels and field names are syntax), the `address` of the instruction its operation came from (for a comment, the address it is attached to), and the `target` a name refers to: a called function's entry, or the slot of a `pointers` function known only by name; a global's or a string's start, whether it is read or its address taken (`&completed.0`, `main` passed to `__libc_start_main`); a label's code. A qualified name is one token, its namespaces and `::`s included: `std::string::operator+=` is a `function` token targeting `operator+=`. Ghidra's printer may break a long one at a `::` (`void std::` at the end of a line, `::_M_erase(…)` starting the next); each line then holds a token of it, of the name's kind, and only the last, the name's own, has an address and a target.
+- `tokens`, in order, are `{ start, end, kind, address?, target?, variable?, comment? }`: where the token is in the line's text (UTF-16 code units, end exclusive, the spaces around it left out), its `kind` from Ghidra's syntax highlighting (`keyword`, `comment`, `type`, `function`, `variable`, `constant` or `syntax`; parameters and globals are variables, a function passed as a pointer too; punctuation, operators, labels and field names are syntax), the `address` of the instruction its operation came from (for a comment, the address it is attached to), and the `target` a name refers to: a called function's entry, or the slot of a `pointers` function known only by name; a global's or a string's start, whether it is read or its address taken (`&completed.0`, `main` passed to `__libc_start_main`); a label's code. A qualified name is one token, its namespaces and `::`s included: `std::string::operator+=` is a `function` token targeting `operator+=`. Ghidra's printer may break a long one at a `::` (`void std::` at the end of a line, `::_M_erase(…)` starting the next); each line then holds a token of it, of the name's kind, and only the last, the name's own, has an address and a target. A local variable's or parameter's name carries the variable's id as `variable`, and each word of a comment says whose comment it is as `comment`: `'user'` for the caller's, `'warning'` for the decompiler's.
 - `addresses` is the set of the line's tokens' addresses, sorted. A line without one, such as a declaration, has none.
 
 For crackme's `    iVar1 = strcmp(acStack_98,"hunter2");`:
 
 ```js
-{ start: 4,  end: 9,  kind: 'variable', address: 0x1277 }                   // iVar1
-{ start: 12, end: 18, kind: 'function', address: 0x1277, target: 0x10f0 }   // strcmp
-{ start: 19, end: 29, kind: 'variable', address: 0x126a }                   // acStack_98
-{ start: 30, end: 39, kind: 'constant', address: 0x1277, target: 0x2017 }   // "hunter2"
+{ start: 4,  end: 9,  kind: 'variable', address: 0x1277, variable: 'register:0x0:4@+0x8e' } // iVar1
+{ start: 12, end: 18, kind: 'function', address: 0x1277, target: 0x10f0 }                  // strcmp
+{ start: 19, end: 29, kind: 'variable', address: 0x126a, variable: 'stack:-0x98' }          // acStack_98
+{ start: 30, end: 39, kind: 'constant', address: 0x1277, target: 0x2017 }                  // "hunter2"
 // addresses: [0x126a, 0x1277]
 ```
+
+### Naming variables and adding comments
+
+A decompiled function lists the local variables and parameters its tokens name in `variables`, in the order first named, each `{ id, kind, name, storage, locked? }`: crackme's `main` has `{ id: 'stack:-0x98', kind: 'local', name: 'acStack_98', storage: 'Stack[-0x98]' }` and `{ id: 'register:0x0:4@+0x8e', kind: 'local', name: 'iVar1', storage: 'EAX' }`. `decompile` takes names for them by id, and comments by address, beside the guards:
+
+```ts
+const result = program.decompile(0x11e9, {
+  locals: [
+    { id: 'stack:-0x98', name: 'password' },
+    { id: 'register:0x0:4@+0x8e', name: 'result' },
+  ],
+  comments: [{ address: 0x1277, text: 'the check' }], // call strcmp
+  functionComment: 'Asks for the password.',
+})
+```
+
+```c
+/* Asks for the password. */
+
+undefined8 main(void)
+
+{
+  int result;
+  ...
+  char password [136];
+  ...
+                    /* the check */
+    result = strcmp(password,"hunter2");
+    if (result == 0) {
+```
+
+| Option | What it does |
+| --- | --- |
+| `locals` | `{ id, name }[]`: a name for each variable whose `id` a decompilation reported. |
+| `comments` | `{ address, text }[]`: a comment at an instruction, printed before the statement whose code holds it. |
+| `functionComment` | A comment above the function's declaration. |
+| `unplacedComments` | Lists the comments no statement holds above the function; by default they are left out, as in Ghidra. |
+
+An **id** is the decompiler's identity for the variable, from where Ghidra keeps it, and is opaque to the caller:
+
+- `stack:-0x98`: a variable tied to a stack location, by its offset alone, so it survives a change of its size;
+- `register:0x0:4@+0x8e`: a storage, its size and the variable's first use as an offset from the function's entry; a parameter's first use is `@-0x1`, the entry less one, as Ghidra writes it;
+- `join(register:0x10:8+register:0x0:8):16@+0x19b`: a value split across registers, by its pieces;
+- `hash:0x3f276f9932@+0x27c`: a temporary, by Ghidra's hash of its data-flow and where it is used, and any variable whose storage the decompiler's own lookup would not tell apart.
+
+The same bytes give the same ids whatever was decompiled before, in any program, and wherever the program is placed. A stack id survives almost any change of the function's bytes; a register id lasts while the instruction setting the variable does; a hash is the most fragile, changing with the code around the temporary. `storage` says where the variable lives as Ghidra writes it: a register (`EAX`), a stack location (`Stack[-0x98]`), the registers of a split value, most significant first (`RDX:RAX`), or a temporary's hash (`HASH:3f276f9932`).
+
+**Names** are applied after the decompiler's analysis, just before printing, so the code and every other name read as without them: naming `iVar1` does not turn `pcVar2` into `pcVar1`, as renaming during the analysis, Ghidra's own route, does. An id that names no variable of this decompilation, after the bytes changed, is ignored, and a parameter named by a declaration of `prototypes` (`int puts(char *s)`) is reported `locked: true` and keeps its name. A name is printed as given, so the caller checks it is a C identifier: Ghidra prints keywords, spaces and `*/` as they are. A name another variable has prints with a suffix (`status_00` beside `status`), and a global's name makes the global print as `::printf`. A malformed id or an empty name is a `RangeError`.
+
+**Comments** are Ghidra's PRE comments, which it places before the statement whose code holds the address, several at one address in the order given and above the decompiler's own warnings there; a line break starts a new line of the comment, an empty text adds nothing, and `*/` is written `* /` so the comment does not end early. Statements that share an instruction (a copy the decompiler moved next to a call) are not told apart by its address, so a comment there goes above the statement Ghidra roots at it, which may be the one after the line meant. An address no statement holds is left out: an instruction without p-code (the entry's `endbr64`), code the decompiler removed as dead or unreachable, or an address outside the function. `unplacedComments` lists those above the function instead, by address, under Ghidra's heading `/* Comments that could not be placed in the function body: */`. The function comment is Ghidra's plate comment: above the declaration, before the decompiler's header warnings, an empty line after them. Each word of a comment is a token of kind `comment` with the comment's address (the function comment's is the entry) and `comment: 'user'`; the decompiler's own warnings, and the heading of the unplaced comments, have `comment: 'warning'`.
+
+Nothing is kept between calls: each names and comments only its own decompilation. A call without these options decompiles as before them. They cost little: factcheck's `main` took 23.5 ms, and 25 ms with 32 names, 80 comments and a function comment; reporting the ids costs nothing measurable (factcheck's 323 functions in 390 ms, as before them).
 
 ### Guards
 

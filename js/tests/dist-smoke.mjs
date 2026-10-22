@@ -1,8 +1,9 @@
 // Smoke test for the published artifact: loads the decompiler through dist/
 // with every default (the wasm beside dist/wasm/decompiler.mjs, the specs in
-// dist/specs/) and decompiles crackme's main, checking the text, the warnings
-// and the lines' tokens, and factcheck's main with its C++ names in their
-// namespaces, so it covers what a consumer of @specy/decompiler
+// dist/specs/) and decompiles crackme's main, checking the text, the warnings,
+// the lines' tokens and a local named and a comment added through the
+// annotations, and factcheck's main with its C++ names in their namespaces,
+// so it covers what a consumer of @specy/decompiler
 // imports rather than the sources vitest exercises.
 //
 // The vitest suite runs against src/ and passes the repository's specs/ by
@@ -60,6 +61,20 @@ const puts = correct.tokens.find((token) => correct.text.slice(token.start, toke
 assert.equal(puts.kind, 'function')
 assert.equal(puts.target, image.functions.find((fn) => fn.name === 'puts').address)
 assert.deepEqual(correct.addresses, [puts.address])
+assert.deepEqual(
+    result.variables.find((variable) => variable.name === 'acStack_98'),
+    { id: 'stack:-0x98', kind: 'local', name: 'acStack_98', storage: 'Stack[-0x98]' },
+    'the password buffer is a variable with its id'
+)
+const annotated = program.decompile(main.address, {
+    locals: [{ id: 'stack:-0x98', name: 'password' }],
+    comments: [{ address: 0x1277, text: 'the check' }] // call strcmp
+})
+assert.ok('text' in annotated, `main decompiles with annotations: ${annotated.error}`)
+assert.ok(
+    annotated.text.includes('/* the check */\n    iVar1 = strcmp(password,"hunter2");'),
+    'the local is named and the comment placed above its statement'
+)
 program.dispose()
 
 // C++ names in their namespaces, bound to glibc.h by their mangled symbols.

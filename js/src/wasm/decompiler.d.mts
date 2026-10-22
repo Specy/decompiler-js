@@ -20,6 +20,14 @@ export interface DecompilerModule {
     _program_open(image: number, size: number, languageId: number, namespaces: number): number
     _program_warnings(program: number): number
     _program_decompile(program: number, address: number, maxInstructions: number, timeLimitMs: number): number
+    _program_decompile_annotated(
+        program: number,
+        address: number,
+        maxInstructions: number,
+        timeLimitMs: number,
+        annotations: number,
+        size: number
+    ): number
     _program_close(program: number): void
 }
 

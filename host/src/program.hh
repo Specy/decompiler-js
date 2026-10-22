@@ -27,6 +27,34 @@ std::string ghidraVersion();
 
 class HostArchitecture;
 
+/// What a caller adds to one decompilation of a function: names for its
+/// local variables and parameters, by the ids the markup reports
+/// (variableId), and comments, printed as Ghidra prints a function's PRE
+/// (user2) and plate (header) comments.
+struct Annotations {
+  struct Local {
+    std::string id;
+    std::string name;
+  };
+  struct LineComment {
+    uint64_t address = 0;
+    std::string text;
+  };
+  /// Applied after the analysis, in order, each name made unique in the
+  /// function's scope. An id naming no variable, or a variable named by a
+  /// declaration, is passed over.
+  std::vector<Local> locals;
+  /// Each printed before the statement whose code holds its address.
+  std::vector<LineComment> comments;
+  /// Printed above the function's declaration; none when empty.
+  std::string functionComment;
+  /// Lists the comments that no statement holds the address of under
+  /// Ghidra's "Comments that could not be placed in the function body:"
+  /// above the function, rather than leaving them out (PrintC's
+  /// setDisplayUnplaced).
+  bool unplacedComments = false;
+};
+
 /// How far the decompiler qualifies a name with its namespaces, Ghidra's
 /// namespacestrategy option: "minimal", as far as tells it apart where it is
 /// used (`std::string::operator+=` in main, `max_size` inside another member
@@ -71,9 +99,11 @@ class Program {
   /// 100000 instructions") and gives up once it has worked for timeLimitMs
   /// milliseconds ("main took longer than 30 seconds to decompile"), checking
   /// the time before each pass of each of its actions
-  /// (patches/0001-action-checkpoint.patch).
+  /// (patches/0001-action-checkpoint.patch). The annotations name variables
+  /// and add comments to this decompilation only.
   DecompiledFunction decompile(uint64_t address, uint32_t maxInstructions = DEFAULT_MAX_INSTRUCTIONS,
-                               uint32_t timeLimitMs = DEFAULT_TIME_LIMIT_MS);
+                               uint32_t timeLimitMs = DEFAULT_TIME_LIMIT_MS,
+                               const Annotations &annotations = Annotations());
 
   /// What went wrong building the program without stopping it: each line
   /// Ghidra printed while building the architecture, then each declaration

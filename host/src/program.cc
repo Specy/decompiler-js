@@ -364,20 +364,95 @@ std::string duration(uint32_t milliseconds) {
 /// What FlowInfo throws past Architecture::max_instructions (flow.cc).
 const char *const TOO_MANY_INSTRUCTIONS = "Flow exceeded maximum allowable instructions";
 
-/// Clears a function's analysis when it goes out of scope, however its
-/// decompilation ended. Nothing reuses it, since each decompilation starts
-/// afresh, and kept it is costly: decompiling each of hello-atexit-static's
-/// 1,087 functions once left 944 MB of analyses in the heap.
+/// The comment types a caller's annotations add (Annotations), which the
+/// comment database keeps across decompilations until they are cleared;
+/// Architecture::clearAnalysis clears only the decompiler's warnings.
+const uint4 CALLER_COMMENTS = Comment::user1 | Comment::user2 | Comment::user3 | Comment::header;
+
+/// Clears a function's analysis, and the comments its annotations added,
+/// when it goes out of scope, however its decompilation ended. Nothing
+/// reuses the analysis, since each decompilation starts afresh, and kept it
+/// is costly: decompiling each of hello-atexit-static's 1,087 functions once
+/// left 944 MB of analyses in the heap.
 struct ClearAnalysisAfter {
   Architecture &architecture;
   Funcdata *function;
   ~ClearAnalysisAfter() {
     try {
       architecture.clearAnalysis(function);
+      architecture.commentdb->clearType(function->getAddress(), CALLER_COMMENTS);
     } catch (...) {
     }
   }
 };
+
+/// A comment's text as a C comment holds it: each `*/`, which would end the
+/// comment early, written `* /`.
+std::string commentText(const std::string &text) {
+  std::string escaped;
+  for (size_t i = 0; i < text.size(); ++i) {
+    escaped += text[i];
+    if (text[i] == '*' && i + 1 < text.size() && text[i + 1] == '/') escaped += ' ';
+  }
+  return escaped;
+}
+
+/// Puts the annotations' comments in the comment database for the function,
+/// as Ghidra's Java side sends a function's comments for each decompilation
+/// (comment_ghidra.cc): a line comment as a PRE comment (user2), which the
+/// printer places before the statement whose code holds its address
+/// (CommentSorter::findPosition), and the function comment as its plate
+/// comment (header), above the declaration and before the decompiler's own
+/// header warnings, which the analysis adds after it. An empty text adds
+/// nothing.
+void addComments(Architecture &architecture, const Funcdata &function, const Annotations &annotations) {
+  Address entry = function.getAddress();
+  architecture.commentdb->clearType(entry, CALLER_COMMENTS);
+  for (const Annotations::LineComment &comment : annotations.comments) {
+    if (comment.text.empty()) continue;
+    architecture.commentdb->addComment(Comment::user2, entry,
+                                       Address(architecture.getDefaultCodeSpace(), comment.address),
+                                       commentText(comment.text));
+  }
+  if (!annotations.functionComment.empty())
+    architecture.commentdb->addComment(Comment::header, entry, entry, commentText(annotations.functionComment));
+}
+
+/// Renames each local variable or parameter whose id (variableId) the
+/// annotations name, after the analysis and before printing, each name made
+/// unique in the function's scope (`name_00` after a `name`), in the order
+/// given. The code and every other name stay as the analysis left them:
+/// Ghidra's own route, name recommendations that ActionNameVars applies
+/// during the analysis, renumbers other default names and misses
+/// parameters the code never reads and temporaries whose hash changes after
+/// it. A parameter named by a declaration (its name locked) keeps its name,
+/// and an id naming no variable is passed over. Clearing the analysis
+/// removes the local scope's symbols but those whose type is locked, and
+/// takes back the names of those it keeps (ScopeInternal::clearUnlocked), so
+/// no name carries over to the next decompilation.
+void nameVariables(Funcdata &function, const std::vector<Annotations::Local> &locals) {
+  if (locals.empty()) return;
+  ScopeLocal *scope = function.getScopeLocal();
+  std::map<std::string, Symbol *> byId;
+  auto add = [&](Symbol *symbol) {
+    if (symbol == nullptr) return;
+    int4 category = symbol->getCategory();
+    if (category != Symbol::no_category && category != Symbol::function_parameter) return;
+    std::string id = variableId(symbol, &function);
+    if (!id.empty()) byId.emplace(id, symbol);
+  };
+  for (MapIterator iter = scope->begin(); iter != scope->end(); ++iter) add((*iter)->getSymbol());
+  for (auto iter = scope->beginDynamic(); iter != scope->endDynamic(); ++iter) add((*iter).getSymbol());
+  for (int4 i = 0; i < scope->getCategorySize(Symbol::function_parameter); ++i)
+    add(scope->getCategorySymbol(Symbol::function_parameter, i));
+  for (const Annotations::Local &local : locals) {
+    auto found = byId.find(local.id);
+    if (found == byId.end()) continue;
+    Symbol *symbol = found->second;
+    if (symbol->isNameLocked() || symbol->getName() == local.name) continue;
+    scope->renameSymbol(symbol, scope->makeNameUnique(local.name));
+  }
+}
 
 [[noreturn]] void rethrow() {
   try {
@@ -492,7 +567,8 @@ std::vector<std::string> Program::warnings() const {
   return all;
 }
 
-DecompiledFunction Program::decompile(uint64_t address, uint32_t maxInstructions, uint32_t timeLimitMs) {
+DecompiledFunction Program::decompile(uint64_t address, uint32_t maxInstructions, uint32_t timeLimitMs,
+                                      const Annotations &annotations) {
   Funcdata *function = nullptr;
   deadline.passed = false;
   try {
@@ -507,6 +583,8 @@ DecompiledFunction Program::decompile(uint64_t address, uint32_t maxInstructions
     }
     if (function->isProcStarted()) architecture->clearAnalysis(function);
     ClearAnalysisAfter cleared{*architecture, function};
+    addComments(*architecture, *function, annotations);
+    architecture->markup->setDisplayUnplaced(annotations.unplacedComments);
     architecture->useTranslator();
     Action *action = architecture->allacts.getCurrent();
     action->reset(*function);
@@ -515,6 +593,7 @@ DecompiledFunction Program::decompile(uint64_t address, uint32_t maxInstructions
       if (action->perform(*function) < 0 || !function->isProcComplete())
         throw std::runtime_error("Decompilation of " + function->getName() + " did not complete");
     }
+    nameVariables(*function, annotations.locals);
     return architecture->markup->print(function);
   } catch (const std::runtime_error &) {
     throw;

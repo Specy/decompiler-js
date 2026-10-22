@@ -4,6 +4,8 @@
 //   decompile [--prototypes <file.h>] [--save <file.xml>] [--repeat <n>] [--json]
 //             [--max-instructions <n>] [--time-limit <ms>] [--image]
 //             [--names <file.tsv>] [--namespaces minimal|all|none]
+//             [--local <id>=<name>]... [--comment <0xaddress>=<text>]...
+//             [--function-comment <text>] [--unplaced] [--variables]
 //             <spec directory> <elf> <function name or 0xaddress>
 //
 // Prints the C to stdout, and the times and warnings to stderr. --image reads
@@ -22,7 +24,14 @@
 // first, then its name in them, separated by tabs
 // (`_ZNSt6vectorIiSaIiEE4sizeEv`, `std`, `vector<int>`, `size`): the symbol's
 // name becomes the entry's symbol. --namespaces is the strategy the wasm's
-// openProgram takes, by default minimal.
+// openProgram takes, by default minimal. --local names a local variable or
+// parameter by the id the markup reports, --comment adds a comment at an
+// instruction and --function-comment one above the function, a `\n` in
+// either text starting a new line, and --unplaced lists the comments that
+// could not be placed, as the wasm's decompile options locals, comments,
+// functionComment and unplacedComments do. --variables prints, after the C,
+// each variable the C names: its id, kind, name and storage, and "locked"
+// for one a declaration names.
 #include <chrono>
 #include <fstream>
 #include <iomanip>
@@ -70,6 +79,27 @@ std::map<std::string, std::vector<std::string>> readNames(const std::string &pat
   return names;
 }
 
+/// "<before>=<after>", split at the first "=".
+std::pair<std::string, std::string> splitPair(const std::string &option, const std::string &pair) {
+  size_t equals = pair.find('=');
+  if (equals == std::string::npos) throw std::runtime_error(option + " takes <key>=<value>: " + pair);
+  return {pair.substr(0, equals), pair.substr(equals + 1)};
+}
+
+/// A comment's text from the command line, each `\n` a line break.
+std::string commentText(const std::string &text) {
+  std::string out;
+  for (size_t k = 0; k < text.size(); ++k) {
+    if (text[k] == '\\' && k + 1 < text.size() && text[k + 1] == 'n') {
+      out += '\n';
+      ++k;
+    } else {
+      out += text[k];
+    }
+  }
+  return out;
+}
+
 /// Gives an entry of the image the name, path and symbol the table has for
 /// its name.
 template <typename Entry>
@@ -88,6 +118,8 @@ int main(int argc, char **argv) {
   int repeat = 1;
   bool json = false;
   bool imageFile = false;
+  bool showVariables = false;
+  host::Annotations annotations;
   uint32_t maxInstructions = host::Program::DEFAULT_MAX_INSTRUCTIONS;
   uint32_t timeLimitMs = host::Program::DEFAULT_TIME_LIMIT_MS;
   int i = 1;
@@ -95,7 +127,16 @@ int main(int argc, char **argv) {
     std::string option = argv[i];
     if (option == "--json") json = true;
     else if (option == "--image") imageFile = true;
+    else if (option == "--unplaced") annotations.unplacedComments = true;
+    else if (option == "--variables") showVariables = true;
     else if (i + 1 == argc) break;
+    else if (option == "--local") {
+      auto [id, name] = splitPair(option, argv[++i]);
+      annotations.locals.push_back({id, name});
+    } else if (option == "--comment") {
+      auto [address, text] = splitPair(option, argv[++i]);
+      annotations.comments.push_back({std::stoull(address, nullptr, 16), commentText(text)});
+    } else if (option == "--function-comment") annotations.functionComment = commentText(argv[++i]);
     else if (option == "--save") savePath = argv[++i];
     else if (option == "--prototypes") prototypesPath = argv[++i];
     else if (option == "--names") namesPath = argv[++i];
@@ -108,7 +149,9 @@ int main(int argc, char **argv) {
   if (argc - i != 3) {
     std::cerr << "usage: decompile [--prototypes <file.h>] [--save <file.xml>] [--repeat <n>] [--json] "
                  "[--max-instructions <n>] [--time-limit <ms>] [--image] [--names <file.tsv>] "
-                 "[--namespaces minimal|all|none] <spec directory> <elf> <function name or 0xaddress>\n";
+                 "[--namespaces minimal|all|none] [--local <id>=<name>]... [--comment <0xaddress>=<text>]... "
+                 "[--function-comment <text>] [--unplaced] [--variables] "
+                 "<spec directory> <elf> <function name or 0xaddress>\n";
     return 2;
   }
   std::string specDirectory = argv[i], elfPath = argv[i + 1], target = argv[i + 2];
@@ -153,7 +196,7 @@ int main(int argc, char **argv) {
     host::DecompiledFunction result;
     for (int run = 0; run < repeat; ++run) {
       auto decompileStart = std::chrono::steady_clock::now();
-      result = program.decompile(address, maxInstructions, timeLimitMs);
+      result = program.decompile(address, maxInstructions, timeLimitMs, annotations);
       std::cerr << (run == 0 ? "first" : "again") << " decompile: " << std::fixed
                 << std::setprecision(1) << millisecondsSince(decompileStart) << " ms\n";
     }
@@ -161,6 +204,10 @@ int main(int argc, char **argv) {
               << host::ghidraVersion() << ")\n";
     for (const std::string &warning : program.warnings()) std::cerr << "warning: " << warning << "\n";
     std::cout << (json ? result.json() : result.text()) << "\n";
+    if (showVariables)
+      for (const host::Variable &variable : result.variables)
+        std::cout << variable.id << '\t' << (variable.parameter ? "parameter" : "local") << '\t' << variable.name
+                  << '\t' << variable.storage << (variable.locked ? "\tlocked" : "") << "\n";
     return 0;
   } catch (const std::exception &error) {
     std::cerr << "error: " << error.what() << "\n";
