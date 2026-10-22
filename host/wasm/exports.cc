@@ -55,11 +55,13 @@ EMSCRIPTEN_KEEPALIVE int decompiler_add_specs(const char *directory) {
 }
 
 /// Builds the architecture for a program image in the binary form
-/// readProgramImage reads (host/src/program_image.hh).
-EMSCRIPTEN_KEEPALIVE host::Program *program_open(const uint8_t *image, uint32_t size,
-                                                 const char *languageId) {
+/// readProgramImage reads (host/src/program_image.hh), its names qualified
+/// with their namespaces by the strategy namespaces names: "minimal", "all"
+/// or "none" (host::NAMESPACE_STRATEGIES).
+EMSCRIPTEN_KEEPALIVE host::Program *program_open(const uint8_t *image, uint32_t size, const char *languageId,
+                                                 const char *namespaces) {
   try {
-    return new host::Program(host::readProgramImage(image, size), languageId);
+    return new host::Program(host::readProgramImage(image, size), languageId, namespaces);
   } catch (const std::exception &error) {
     fail(error);
     return nullptr;
@@ -77,8 +79,8 @@ EMSCRIPTEN_KEEPALIVE char *program_warnings(host::Program *program) {
 /// timeLimitMs milliseconds (0 for Ghidra's default, 30 seconds), as JSON to
 /// be freed with free(): {"address", "name", "lines"}, each line an array of
 /// tokens [text, kind, address, target] with kind an index into keyword,
-/// comment, type, function, variable, constant, syntax and address and target
-/// -1 when absent (host/src/markup.hh); or {"address", "error"}.
+/// comment, type, function, variable, constant, syntax, scope and address and
+/// target -1 when absent (host/src/markup.hh); or {"address", "error"}.
 EMSCRIPTEN_KEEPALIVE char *program_decompile(host::Program *program, double address, uint32_t maxInstructions,
                                              uint32_t timeLimitMs) {
   uint64_t entry = (uint64_t)address;

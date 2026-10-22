@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <chrono>
+#include <iterator>
 #include <map>
+#include <optional>
 #include <set>
 #include <stdexcept>
 
@@ -97,51 +99,112 @@ class HostArchitecture : public SleighArchitecture {
 
   const ImageLoadImage &image() const { return *static_cast<const ImageLoadImage *>(loader); }
 
+  /// The addresses each namespace's functions start at and its data cover,
+  /// registered with it by ownAddresses().
+  std::map<Scope *, RangeList> owned;
+
+  /// The namespace scope a path names, each namespace created as needed, as
+  /// Ghidra's readLoaderSymbols creates them from a name split at its `::`s
+  /// (Database::findCreateScopeFromSymbolName, with the id it derives from
+  /// the name and its parent's, Scope::hashScopeName); the global scope for
+  /// an empty path. A namespace's name is never split: findCreate…'s
+  /// delimiter is a byte the name does not hold.
+  Scope *scopeOf(const NamespacePath &path) {
+    Scope *scope = symboltab->getGlobalScope();
+    for (const std::string &name : path) {
+      std::string delimiter;
+      for (unsigned byte = 1; byte < 256 && delimiter.empty(); ++byte)
+        if (name.find((char)byte) == std::string::npos) delimiter.assign(1, (char)byte);
+      if (delimiter.empty()) throw LowlevelError("A namespace's name holds every byte");
+      std::string basename;
+      scope = symboltab->findCreateScopeFromSymbolName(name + delimiter, delimiter, basename, scope);
+    }
+    return scope;
+  }
+
+  /// Records that the namespace scope owns the bytes from first to last.
+  void own(Scope *scope, AddrSpace *space, uint64_t first, uint64_t last) {
+    if (scope != symboltab->getGlobalScope()) owned[scope].insertRange(space, first, last);
+  }
+
+  /// Registers with each namespace the addresses it owns, so that a lookup
+  /// by address (Scope::queryFunction, queryContainer, through
+  /// Database::mapScope) starts from that namespace and finds its symbols on
+  /// the way up to the global scope. A namespace readLoaderSymbols creates
+  /// owns no address, which hides its functions from every lookup by
+  /// address (a call's target, decompile's entry); Ghidra's Java side
+  /// answers those lookups itself.
+  void ownAddresses() {
+    for (const auto &[scope, ranges] : owned) symboltab->setRange(scope, ranges);
+  }
+
+  /// Each function of the image becomes a function symbol in the namespace
+  /// its path names, by its name, which is never split; done where Ghidra's
+  /// readLoaderSymbols would split names at `::`.
+  void addFunctions(SymbolsByBinding &symbols) {
+    loadersymbols_parsed = true;
+    AddrSpace *space = getDefaultCodeSpace();
+    for (const FunctionName &function : image().functions()) {
+      Scope *scope = scopeOf(function.path);
+      FunctionSymbol *symbol = scope->addFunction(Address(space, function.address), function.name);
+      own(scope, space, function.address, function.address);
+      symbols[function.binding()].push_back(symbol);
+    }
+    ownAddresses();
+  }
+
   /// Each pointer becomes an external reference at its slot, as Ghidra's Java
   /// side sends a GOT entry that points at an external function: a value of
   /// type `code *` that the decompiler resolves to the function at
   /// slotFunctions gives for its slot when the program calls through it
   /// (ActionDeindirect),
   /// whatever the slot's bytes hold. The slot's name is the data name given
-  /// at its address, taken out of data, or else the decompiler's own name for
-  /// a global `code *` there (`pcRam0000000000003fd8`).
+  /// at its address, taken out of data, in its namespace, or else the
+  /// decompiler's own name for a global `code *` there
+  /// (`pcRam0000000000003fd8`).
   void addPointers(const std::vector<PointerName> &pointers, const std::map<uint64_t, uint64_t> &slotFunctions,
-                   std::vector<DataName> &data) {
+                   std::vector<DataName> &data, SymbolsByBinding &symbols) {
     Scope *global = symboltab->getGlobalScope();
     AddrSpace *space = getDefaultDataSpace();
-    std::map<uint64_t, std::string> slotNames;
+    std::map<uint64_t, DataName> slotNames;
     std::vector<DataName> kept;
     std::set<uint64_t> slots;
     for (const PointerName &pointer : pointers) slots.insert(pointer.address);
     for (DataName &entry : data) {
       if (slots.count(entry.address) == 0) kept.push_back(std::move(entry));
-      else slotNames.emplace(entry.address, std::move(entry.name));
+      else slotNames.emplace(entry.address, std::move(entry));
     }
     data = std::move(kept);
     Datatype *codePointer = types->getTypePointer(space->getAddrSize(), types->getTypeCode(), space->getWordSize());
     for (const PointerName &pointer : pointers) {
       Address slot(space, pointer.address);
       if (global->queryFunction(slot) != nullptr) continue;  // the function's name wins
+      Address function(getDefaultCodeSpace(), slotFunctions.at(pointer.address));
       auto named = slotNames.find(pointer.address);
-      std::string name;
-      if (named != slotNames.end()) {
-        name = named->second;
-      } else {
+      if (named == slotNames.end()) {
         int4 index = 0;
-        name = global->buildVariableName(slot, Address(), codePointer, index, Varnode::persist);
+        std::string name = global->buildVariableName(slot, Address(), codePointer, index, Varnode::persist);
+        global->addExternalRef(slot, function, name);
+        continue;
       }
-      global->addExternalRef(slot, Address(getDefaultCodeSpace(), slotFunctions.at(pointer.address)), name);
+      const DataName &entry = named->second;
+      Scope *scope = scopeOf(entry.path);
+      symbols[entry.binding()].push_back(scope->addExternalRef(slot, function, entry.name));
+      own(scope, space, pointer.address, pointer.address + space->getAddrSize() - 1);
     }
+    ownAddresses();
   }
 
-  /// Each data name becomes a global symbol whose name is locked, as Ghidra's
+  /// Each data name becomes a symbol in the namespace its path names, its
+  /// name locked, as Ghidra's
   /// Java side sends a labelled Data: a string's as an array of char with its
   /// type locked, too; another with a known size as undefined1, 2, 4 or 8, or
   /// an array of undefined1, the type left for the decompiler to refine; one
   /// without a size as a single undefined1. A string without a name gets no
   /// symbol: where a char pointer is expected the decompiler prints it as a
   /// literal anyway, as it does any string in read-only memory.
-  void addData(const std::vector<DataName> &data, const std::vector<StringRange> &strings) {
+  void addData(const std::vector<DataName> &data, const std::vector<StringRange> &strings,
+               SymbolsByBinding &symbols) {
     Scope *global = symboltab->getGlobalScope();
     AddrSpace *space = getDefaultDataSpace();
     std::map<uint64_t, uint64_t> stringLengths;
@@ -163,9 +226,13 @@ class HostArchitecture : public SleighArchitecture {
       } else {
         type = types->getBase(1, TYPE_UNKNOWN);
       }
-      SymbolEntry *symbol = global->addSymbol(entry.name, type, address, Address());
-      global->setAttribute(symbol->getSymbol(), locks);
+      Scope *scope = scopeOf(entry.path);
+      SymbolEntry *symbol = scope->addSymbol(entry.name, type, address, Address());
+      scope->setAttribute(symbol->getSymbol(), locks);
+      symbols[entry.binding()].push_back(symbol->getSymbol());
+      own(scope, space, entry.address, entry.address + std::max<uint64_t>(type->getSize(), 1) - 1);
     }
+    ownAddresses();
   }
 };
 
@@ -181,6 +248,8 @@ void startLibrary(const std::vector<std::string> &specDirectories) {
 }
 
 std::string ghidraVersion() { return GHIDRA_VERSION; }
+
+const char *const NAMESPACE_STRATEGIES[3] = {"minimal", "all", "none"};
 
 namespace {
 
@@ -258,14 +327,21 @@ struct ClearAnalysisAfter {
   }
 }
 
-/// The address of the function each pointer names, by name: the image's
-/// function of that name, or else a placeholder added to the image's functions
-/// past every address the image describes, with no bytes, so that the
-/// prototypes bind to it by name like any function's. Placeholders are 16
-/// bytes apart; their slots are recorded in placeholders.
+/// The address of the function each pointer names: the image's first
+/// function whose symbol (or name, without one) is the pointer's symbol when
+/// it has one, else whose name and namespace path are the pointer's; or else
+/// a placeholder with the pointer's name, path and symbol, added to the
+/// image's functions past every address the image describes, with no bytes,
+/// so that the prototypes bind to it like any function's. Placeholders are
+/// 16 bytes apart; their slots are recorded in placeholders.
 std::map<uint64_t, uint64_t> pointedFunctions(ProgramImage &image, std::map<uint64_t, uint64_t> &placeholders) {
-  std::map<std::string, uint64_t> byName;
-  for (const FunctionName &function : image.functions) byName.emplace(function.name, function.address);
+  using QualifiedName = std::pair<NamespacePath, std::string>;
+  std::map<std::string, uint64_t> bySymbol;
+  std::map<QualifiedName, uint64_t> byName;
+  for (const FunctionName &function : image.functions) {
+    bySymbol.emplace(function.binding(), function.address);
+    byName.emplace(QualifiedName(function.path, function.name), function.address);
+  }
   uint64_t end = 0;
   for (const Region &region : image.regions) end = std::max(end, region.address + region.bytes.size());
   for (const FunctionName &function : image.functions) end = std::max(end, function.address + 1);
@@ -275,22 +351,39 @@ std::map<uint64_t, uint64_t> pointedFunctions(ProgramImage &image, std::map<uint
   uint64_t next = (end + 15) & ~(uint64_t)15;
   std::map<uint64_t, uint64_t> slotFunctions;
   for (const PointerName &pointer : image.pointers) {
-    auto known = byName.find(pointer.name);
-    if (known == byName.end()) {
-      known = byName.emplace(pointer.name, next).first;
-      image.functions.push_back({next, pointer.name});
-      placeholders.emplace(next, pointer.address);
-      next += 16;
+    QualifiedName name(pointer.path, pointer.name);
+    std::optional<uint64_t> known;
+    if (pointer.symbol.empty()) {
+      auto function = byName.find(name);
+      if (function != byName.end()) known = function->second;
+    } else {
+      auto function = bySymbol.find(pointer.symbol);
+      if (function != bySymbol.end()) known = function->second;
     }
-    slotFunctions.emplace(pointer.address, known->second);
+    uint64_t address;
+    if (known) {
+      address = *known;
+    } else {
+      address = next;
+      next += 16;
+      FunctionName placeholder{address, pointer.name, pointer.path, pointer.symbol};
+      bySymbol.emplace(placeholder.binding(), address);
+      byName.emplace(name, address);
+      image.functions.push_back(std::move(placeholder));
+      placeholders.emplace(address, pointer.address);
+    }
+    slotFunctions.emplace(pointer.address, address);
   }
   return slotFunctions;
 }
 
 }  // namespace
 
-Program::Program(ProgramImage image, const std::string &languageId) {
+Program::Program(ProgramImage image, const std::string &languageId, const std::string &namespaces) {
   try {
+    if (std::find(std::begin(NAMESPACE_STRATEGIES), std::end(NAMESPACE_STRATEGIES), namespaces) ==
+        std::end(NAMESPACE_STRATEGIES))
+      throw std::invalid_argument("Unknown namespace strategy: " + namespaces);
     normalize(image);
     std::map<uint64_t, uint64_t> slotFunctions = pointedFunctions(image, placeholders);
     std::vector<DataName> data = std::move(image.data);
@@ -307,13 +400,17 @@ Program::Program(ProgramImage image, const std::string &languageId) {
     // What Ghidra's DecompileOptions sends whatever the user's settings
     // (encode: readonly, setlanguage, protoeval); the others it sends only
     // when they differ from the decompiler's own defaults. setlanguage and
-    // protoeval name what the architecture already uses.
+    // protoeval name what the architecture already uses. The namespace
+    // strategy is the caller's, minimal (the default) unless it says
+    // otherwise.
     architecture->options->set(ELEM_READONLY.getId(), "on");
-    architecture->readLoaderSymbols("::");
-    architecture->addPointers(pointers, slotFunctions, data);
-    architecture->addData(data, strings);
+    architecture->options->set(ELEM_NAMESPACESTRATEGY.getId(), namespaces);
+    SymbolsByBinding symbols;
+    architecture->addFunctions(symbols);
+    architecture->addPointers(pointers, slotFunctions, data, symbols);
+    architecture->addData(data, strings, symbols);
     for (const auto &[placeholder, slot] : placeholders) architecture->markup->aliasTarget(placeholder, slot);
-    declarationWarnings = applyDeclarations(*architecture, architecture->organization, prototypes);
+    declarationWarnings = applyDeclarations(*architecture, architecture->organization, symbols, prototypes);
   } catch (const std::invalid_argument &error) {
     throw std::runtime_error(error.what());
   } catch (...) {

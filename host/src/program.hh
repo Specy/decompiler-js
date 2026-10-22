@@ -27,14 +27,22 @@ std::string ghidraVersion();
 
 class HostArchitecture;
 
+/// How far the decompiler qualifies a name with its namespaces, Ghidra's
+/// namespacestrategy option: "minimal", as far as tells it apart where it is
+/// used (`std::string::operator+=` in main, `max_size` inside another member
+/// of its class); "all", in full unless it is in the scope where it is used;
+/// "none", never.
+extern const char *const NAMESPACE_STRATEGIES[3];
+
 /// One program image under a SleighArchitecture configured as Ghidra's Java
 /// side configures its decompiler process: Ghidra's names for the core types,
 /// read-only memory propagating as constants, the image's functions and data
-/// as named symbols, its strings as character arrays, its pointers as
-/// external references to the functions they name, and its prototypes bound
-/// to its functions by name. A function known only through a pointer is
-/// placed past the image's addresses, and its name's target is the pointer's
-/// slot. Errors from Ghidra surface as
+/// as named symbols in the namespaces their paths name, its strings as
+/// character arrays, its pointers as external references to the functions
+/// they name, and its prototypes bound to its functions and data by their
+/// symbols (by their names, for those without one). A function known only
+/// through a pointer is placed past the image's addresses, and its name's
+/// target is the pointer's slot. Errors from Ghidra surface as
 /// std::runtime_error carrying Ghidra's explanation.
 class Program {
   std::ostringstream messages;
@@ -46,8 +54,9 @@ class Program {
 
  public:
   /// languageId names the processor and compiler, as Ghidra's language id
-  /// followed by the compiler id: "x86:LE:64:default:gcc".
-  Program(ProgramImage image, const std::string &languageId);
+  /// followed by the compiler id: "x86:LE:64:default:gcc". namespaces is one
+  /// of NAMESPACE_STRATEGIES.
+  Program(ProgramImage image, const std::string &languageId, const std::string &namespaces = "minimal");
   ~Program();
 
   /// Ghidra's default for maxInstructions, DecompileOptions'

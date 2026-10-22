@@ -7,7 +7,7 @@ The first release. Ghidra's C++ decompiler, from Ghidra 12.1.4
 emsdk 6.0.9: the caller describes a program in memory and gets a function's
 C as Ghidra prints it, as lines of tokens linked to the instructions they come
 from and to the functions and data they name, in a browser or in Node,
-without Java, a server or files. The wasm is 2.1 MB (715 KB gzipped) and the
+without Java, a server or files. The wasm is 2.1 MB (719 KB gzipped) and the
 x86-64 processor description 530 KB.
 
 - `loadDecompiler({ architecture, wasmUrl?, specsUrl? })` loads the module
@@ -15,15 +15,28 @@ x86-64 processor description 530 KB.
   package's module; `decompiler.version` names the Ghidra release and commit.
 - One architecture, `'x86-64'`: Ghidra's `x86:LE:64:default` language with
   its `gcc` compiler specification, the System V calling convention.
-- `openProgram(image)` takes a `ProgramImage`: `regions` (bytes at link-time
-  addresses, read-only and executable flags; read-only loads fold to their
-  values), `functions` and `data` (names, first one kept at an address),
-  `strings`, `pointers` (slots such as GOT entries that hold a function's
-  address, so a call through one is a call of that function with its
-  prototype) and `prototypes` (C declarations, bound by name, `_Noreturn`
-  and its spellings honoured). It throws on a malformed image; declarations
-  it could not read, and Ghidra's messages, are in `program.warnings`. The
-  package reads no executable format and invents no names.
+- `openProgram(image, { namespaces? })` takes a `ProgramImage`: `regions`
+  (bytes at link-time addresses, read-only and executable flags; read-only
+  loads fold to their values), `functions` and `data` (names, first one kept
+  at an address, each with the namespaces it is in and the symbol it binds
+  by), `strings`, `pointers` (slots such as GOT entries that hold a
+  function's address, so a call through one is a call of that function with
+  its prototype) and `prototypes` (C declarations, bound by symbol,
+  `_Noreturn` and its spellings honoured). It throws on a malformed image;
+  declarations it could not read, and Ghidra's messages, are in
+  `program.warnings`. The package reads no executable format and invents no
+  names.
+- C++ names: a function, data or pointer gives its `name` as printed, never
+  split at a `::`, the `namespace` it is in as a path
+  (`['std', 'vector<std::string>']`), each part one namespace whatever it
+  holds, and the `symbol` declarations bind by and pointers name it by, its
+  mangled name, so `glibc.h`'s `_ZSt20__throw_length_errorPKc` still makes
+  `std::__throw_length_error` noreturn. Each namespace owns the addresses of
+  its functions and data, so they are found by address like global ones: a
+  call prints `std::vector<std::string>::push_back(…)` and the function
+  itself decompiles. `namespaces`, Ghidra's namespace strategy, qualifies a
+  name as far as tells it apart where it is used (`'minimal'`, the default),
+  in full (`'all'`) or never (`'none'`).
 - `program.decompile(address, { maxInstructions?, timeLimitMs? })` returns
   `{ address, name, text, lines }` or `{ address, error }`. The guards
   default to Ghidra's 100,000 instructions and 30 seconds; the time is
@@ -34,7 +47,8 @@ x86-64 processor description 530 KB.
   `{ start, end, kind, address?, target? }`, with its span in UTF-16 code
   units, its kind from Ghidra's syntax highlighting, the address of the
   instruction it came from, and the entry, global, string or label a name
-  refers to. A line's `addresses` are its tokens', sorted, each once.
+  refers to; a qualified name (`std::string::operator+=`) is one token. A
+  line's `addresses` are its tokens', sorted, each once.
 - Several programs can be open at once. `program.dispose()` frees one,
   `decompiler.dispose()` all of them; a decompilation keeps nothing once it
   returns. `decompiler.memory()` reports the wasm memory's size and the part

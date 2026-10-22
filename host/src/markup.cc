@@ -18,6 +18,7 @@ const char *tokenKindName(TokenKind kind) {
     case TokenKind::function: return "function";
     case TokenKind::variable: return "variable";
     case TokenKind::constant: return "constant";
+    case TokenKind::scope: return "scope";
     case TokenKind::syntax: break;
   }
   return "syntax";
@@ -290,7 +291,9 @@ class LineBuilder {
     } else if (element == ELEM_SYNTAX) {
       MarkupToken syntax;
       syntax.text = content;
-      syntax.kind = kindOf(color);
+      // PrintC prints a qualifying namespace's name, and nothing else, as
+      // syntax in the global variables' color.
+      syntax.kind = color == Emit::global_color ? TokenKind::scope : kindOf(color);
       add(std::move(syntax));
     } else if (element == ELEM_VARIABLE || element == ELEM_OP || element == ELEM_FUNCNAME ||
                element == ELEM_TYPE || element == ELEM_FIELD || element == ELEM_BITFIELD ||

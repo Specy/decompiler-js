@@ -282,15 +282,16 @@ std::string parseError(const std::string &error) {
   return message + " after `" + read.substr(first == std::string::npos ? 0 : first + 1) + "`";
 }
 
-std::vector<Symbol *> symbolsNamed(Architecture &architecture, const std::string &name) {
-  std::vector<Symbol *> symbols;
-  architecture.symboltab->getGlobalScope()->queryByName(name, symbols);
-  return symbols;
+const std::vector<Symbol *> &symbolsNamed(const SymbolsByBinding &symbols, const std::string &name) {
+  static const std::vector<Symbol *> none;
+  auto found = symbols.find(name);
+  return found == symbols.end() ? none : found->second;
 }
 
 /// Applies one parsed declarator; returns a message when it cannot be.
 /// standIn is the name STAND_IN stands for, if any.
-std::string apply(Architecture &architecture, TypeDeclarator *declarator, bool noreturn, const std::string &standIn) {
+std::string apply(Architecture &architecture, const SymbolsByBinding &symbols, TypeDeclarator *declarator,
+                  bool noreturn, const std::string &standIn) {
   if (!declarator->isValid()) return "Not a valid declaration";
   const std::string &name =
       !standIn.empty() && declarator->getIdentifier() == STAND_IN ? standIn : declarator->getIdentifier();
@@ -307,7 +308,7 @@ std::string apply(Architecture &architecture, TypeDeclarator *declarator, bool n
   }
   PrototypePieces pieces;
   if (declarator->getPrototype(pieces, &architecture)) {
-    for (Symbol *symbol : symbolsNamed(architecture, name)) {
+    for (Symbol *symbol : symbolsNamed(symbols, name)) {
       FunctionSymbol *function = dynamic_cast<FunctionSymbol *>(symbol);
       if (function == nullptr) continue;
       FuncProto &prototype = function->getFunction()->getFuncProto();
@@ -319,7 +320,7 @@ std::string apply(Architecture &architecture, TypeDeclarator *declarator, bool n
   if (noreturn) return "Only a function can be marked noreturn";
   if (name.empty()) return "";  // a struct, union or enum
   Datatype *type = declarator->buildType(&architecture);
-  for (Symbol *symbol : symbolsNamed(architecture, name)) {
+  for (Symbol *symbol : symbolsNamed(symbols, name)) {
     if (dynamic_cast<FunctionSymbol *>(symbol) != nullptr) continue;
     Scope *scope = symbol->getScope();
     scope->retypeSymbol(symbol, type);
@@ -331,7 +332,7 @@ std::string apply(Architecture &architecture, TypeDeclarator *declarator, bool n
 }  // namespace
 
 std::vector<std::string> applyDeclarations(Architecture &architecture, const DataOrganization &organization,
-                                           const std::string &source) {
+                                           const SymbolsByBinding &symbols, const std::string &source) {
   std::vector<std::string> warnings;
   for (Declaration &declaration : split(source, warnings)) {
     std::string quoted = quote(source, declaration);
@@ -354,7 +355,7 @@ std::vector<std::string> applyDeclarations(Architecture &architecture, const Dat
         if (declarators == nullptr || declarators->empty()) problem = "Not a declaration";
         else
           for (TypeDeclarator *declarator : *declarators) {
-            problem = apply(architecture, declarator, noreturn, standIn);
+            problem = apply(architecture, symbols, declarator, noreturn, standIn);
             if (!problem.empty()) break;
           }
       }

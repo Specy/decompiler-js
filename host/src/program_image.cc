@@ -48,6 +48,14 @@ class BufferReader {
     uint32_t size = u32();
     return std::string(reinterpret_cast<const char *>(take(size)), size);
   }
+  NamespacePath path() {
+    NamespacePath path;
+    for (uint32_t n = u32(); n > 0; --n) {
+      path.push_back(text());
+      if (path.back().empty()) throw std::invalid_argument("The program image names an empty namespace");
+    }
+    return path;
+  }
   bool done() const { return at == end; }
 };
 
@@ -70,7 +78,10 @@ void normalize(ProgramImage &image) {
 ProgramImage readProgramImage(const uint8_t *bytes, size_t size) {
   BufferReader in(bytes, size);
   if (std::memcmp(in.take(4), "DIMG", 4) != 0) throw std::invalid_argument("Not a program image");
-  if (in.u32() != 2) throw std::invalid_argument("Unsupported program image version");
+  uint32_t version = in.u32();
+  if (version != 2 && version != 3) throw std::invalid_argument("Unsupported program image version");
+  // Version 3 adds each name's namespace path and symbol.
+  const bool scoped = version >= 3;
   ProgramImage image;
   for (uint32_t n = in.u32(); n > 0; --n) {
     Region region;
@@ -87,6 +98,10 @@ ProgramImage readProgramImage(const uint8_t *bytes, size_t size) {
     FunctionName function;
     function.address = in.u64();
     function.name = in.text();
+    if (scoped) {
+      function.path = in.path();
+      function.symbol = in.text();
+    }
     image.functions.push_back(std::move(function));
   }
   for (uint32_t n = in.u32(); n > 0; --n) {
@@ -94,6 +109,10 @@ ProgramImage readProgramImage(const uint8_t *bytes, size_t size) {
     data.address = in.u64();
     data.size = in.u64();
     data.name = in.text();
+    if (scoped) {
+      data.path = in.path();
+      data.symbol = in.text();
+    }
     image.data.push_back(std::move(data));
   }
   for (uint32_t n = in.u32(); n > 0; --n) {
@@ -106,6 +125,10 @@ ProgramImage readProgramImage(const uint8_t *bytes, size_t size) {
     PointerName pointer;
     pointer.address = in.u64();
     pointer.name = in.text();
+    if (scoped) {
+      pointer.path = in.path();
+      pointer.symbol = in.text();
+    }
     image.pointers.push_back(std::move(pointer));
   }
   image.prototypes = in.text();

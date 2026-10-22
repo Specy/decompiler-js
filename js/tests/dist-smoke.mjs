@@ -1,7 +1,8 @@
 // Smoke test for the published artifact: loads the decompiler through dist/
 // with every default (the wasm beside dist/wasm/decompiler.mjs, the specs in
 // dist/specs/) and decompiles crackme's main, checking the text, the warnings
-// and the lines' tokens, so it covers what a consumer of @specy/decompiler
+// and the lines' tokens, and factcheck's main with its C++ names in their
+// namespaces, so it covers what a consumer of @specy/decompiler
 // imports rather than the sources vitest exercises.
 //
 // The vitest suite runs against src/ and passes the repository's specs/ by
@@ -10,6 +11,7 @@
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { inNamespace, readNameTable } from './helpers/cpp-names.ts'
 import { readElfImage } from './helpers/elf-image.ts'
 
 const dist = new URL('../dist/', import.meta.url)
@@ -58,9 +60,36 @@ const puts = correct.tokens.find((token) => correct.text.slice(token.start, toke
 assert.equal(puts.kind, 'function')
 assert.equal(puts.target, image.functions.find((fn) => fn.name === 'puts').address)
 assert.deepEqual(correct.addresses, [puts.address])
+program.dispose()
+
+// C++ names in their namespaces, bound to glibc.h by their mangled symbols.
+const factcheck = readElfImage(new Uint8Array(readFileSync(new URL('elf/factcheck', fixtures))))
+const names = readNameTable(readFileSync(new URL('elf/factcheck.names.tsv', fixtures), 'utf8'))
+const cpp = decompiler.openProgram({
+    ...factcheck,
+    functions: factcheck.functions.map((fn) => inNamespace(fn, names)),
+    data: factcheck.data.map((entry) => inNamespace(entry, names)),
+    pointers: factcheck.pointers.map((pointer) => inNamespace(pointer, names)),
+    prototypes: glibc
+})
+assert.deepEqual(cpp.warnings, [], 'glibc.h applies to factcheck without a warning')
+const cppMain = cpp.decompile(factcheck.functions.find((fn) => fn.name === 'main').address)
+assert.ok('text' in cppMain, `factcheck's main decompiles: ${cppMain.error}`)
+assert.equal(
+    `${cppMain.text}\n`,
+    readFileSync(new URL('reference/factcheck-main.c', fixtures), 'utf8'),
+    "factcheck's main matches the native reference"
+)
+const append = cppMain.lines
+    .flatMap((line) => line.tokens.map((token) => ({ ...token, text: line.text.slice(token.start, token.end) })))
+    .find((token) => token.text === 'std::string::operator+=')
+assert.equal(append?.kind, 'function', 'a qualified name is one token')
+const appendSymbol = '_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEpLERKS4_'
+assert.equal(append.target, factcheck.functions.find((fn) => fn.name === appendSymbol).address)
+cpp.dispose()
+
 const memory = decompiler.memory()
 assert.ok(memory.used > 0 && memory.size >= memory.used, 'memory() reports the heap')
-program.dispose()
 decompiler.dispose()
 
 console.log(`dist smoke test passed (${decompiler.version})`)

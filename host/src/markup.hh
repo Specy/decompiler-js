@@ -18,7 +18,11 @@ namespace host {
 /// Java's ClangToken colors): parameters, globals and special variables are
 /// variables; the unknown-convention highlight is a keyword's; everything
 /// without a class (punctuation, operators, labels, field names) is syntax.
-enum class TokenKind { keyword, comment, type, function, variable, constant, syntax };
+/// A namespace or class a name is qualified with (PrintC::pushSymbolScope,
+/// emitSymbolScope: `std` and `string` in `std::string::operator+=`) is a
+/// scope, which the package's JavaScript joins, with the `::`s after it, to
+/// the name it qualifies.
+enum class TokenKind { keyword, comment, type, function, variable, constant, syntax, scope };
 
 const char *tokenKindName(TokenKind kind);
 

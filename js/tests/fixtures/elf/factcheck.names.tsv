@@ -1,0 +1,379 @@
+_Z3sumRKSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE	sum
+_Z3sumRKSt6vectorIiSaIiEE	sum
+_ZGVZL8greetingvE4text	greeting()	text	guard
+_ZL8greetingv	greeting
+_ZN4game4BossCI1NS_6PlayerEENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE	game	Boss	Boss
+_ZN4game4BossCI2NS_6PlayerEENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE	game	Boss	Boss
+_ZN4game4BossD0Ev	game	Boss	~Boss
+_ZN4game4BossD1Ev	game	Boss	~Boss
+_ZN4game4BossD2Ev	game	Boss	~Boss
+_ZN4game6PlayerC1ENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE	game	Player	Player
+_ZN4game6PlayerC2ENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE	game	Player	Player
+_ZN4game6PlayerD0Ev	game	Player	~Player
+_ZN4game6PlayerD1Ev	game	Player	~Player
+_ZN4game6PlayerD2Ev	game	Player	~Player
+_ZN4game7clampToIiEET_S1_S1_S1_	game	clampTo<int>
+_ZN4gameplERKNS_6PlayerES2_	game	operator+
+_ZN9__gnu_cxx11char_traitsIcE2eqERKcS3_	__gnu_cxx	char_traits<char>	eq
+_ZN9__gnu_cxx11char_traitsIcE6lengthEPKc	__gnu_cxx	char_traits<char>	length
+_ZN9__gnu_cxx16__aligned_membufISt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEE6_M_ptrEv	__gnu_cxx	__aligned_membuf<std::pair<std::string const, int>>	_M_ptr
+_ZN9__gnu_cxx16__aligned_membufISt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEE7_M_addrEv	__gnu_cxx	__aligned_membuf<std::pair<std::string const, int>>	_M_addr
+_ZN9__gnu_cxx5__ops14_Iter_comp_valIZ4mainEUliiE_EC1EONS0_15_Iter_comp_iterIS2_EE	__gnu_cxx	__ops	_Iter_comp_val<main::'lambda'(int, int)>	_Iter_comp_val
+_ZN9__gnu_cxx5__ops14_Iter_comp_valIZ4mainEUliiE_EC2EONS0_15_Iter_comp_iterIS2_EE	__gnu_cxx	__ops	_Iter_comp_val<main::'lambda'(int, int)>	_Iter_comp_val
+_ZN9__gnu_cxx5__ops14_Iter_comp_valIZ4mainEUliiE_EclINS_17__normal_iteratorIPiSt6vectorIiSaIiEEEEiEEbT_RT0_	__gnu_cxx	__ops	_Iter_comp_val<main::'lambda'(int, int)>	operator()<__gnu_cxx::__normal_iterator<int*, std::vector<int>>, int>
+_ZN9__gnu_cxx5__ops14_Val_comp_iterIZ4mainEUliiE_EC1EONS0_15_Iter_comp_iterIS2_EE	__gnu_cxx	__ops	_Val_comp_iter<main::'lambda'(int, int)>	_Val_comp_iter
+_ZN9__gnu_cxx5__ops14_Val_comp_iterIZ4mainEUliiE_EC2EONS0_15_Iter_comp_iterIS2_EE	__gnu_cxx	__ops	_Val_comp_iter<main::'lambda'(int, int)>	_Val_comp_iter
+_ZN9__gnu_cxx5__ops14_Val_comp_iterIZ4mainEUliiE_EclIiNS_17__normal_iteratorIPiSt6vectorIiSaIiEEEEEEbRT_T0_	__gnu_cxx	__ops	_Val_comp_iter<main::'lambda'(int, int)>	operator()<int, __gnu_cxx::__normal_iterator<int*, std::vector<int>>>
+_ZN9__gnu_cxx5__ops15_Iter_comp_iterIZ4mainEUliiE_EC1ES2_	__gnu_cxx	__ops	_Iter_comp_iter<main::'lambda'(int, int)>	_Iter_comp_iter
+_ZN9__gnu_cxx5__ops15_Iter_comp_iterIZ4mainEUliiE_EC2ES2_	__gnu_cxx	__ops	_Iter_comp_iter<main::'lambda'(int, int)>	_Iter_comp_iter
+_ZN9__gnu_cxx5__ops15_Iter_comp_iterIZ4mainEUliiE_EclINS_17__normal_iteratorIPiSt6vectorIiSaIiEEEESA_EEbT_T0_	__gnu_cxx	__ops	_Iter_comp_iter<main::'lambda'(int, int)>	operator()<__gnu_cxx::__normal_iterator<int*, std::vector<int>>, __gnu_cxx::__normal_iterator<int*, std::vector<int>>>
+_ZN9__gnu_cxx5__ops15__val_comp_iterIZ4mainEUliiE_EENS0_14_Val_comp_iterIT_EENS0_15_Iter_comp_iterIS4_EE	__gnu_cxx	__ops	__val_comp_iter<main::'lambda'(int, int)>
+_ZN9__gnu_cxx5__ops16__iter_comp_iterIZ4mainEUliiE_EENS0_15_Iter_comp_iterIT_EES4_	__gnu_cxx	__ops	__iter_comp_iter<main::'lambda'(int, int)>
+_ZNK4game4Boss5bonusEv	game	Boss	bonus
+_ZNK4game6Player5bonusEv	game	Player	bonus
+_ZNK9__gnu_cxx16__aligned_membufISt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEE6_M_ptrEv	__gnu_cxx	__aligned_membuf<std::pair<std::string const, int>>	_M_ptr
+_ZNK9__gnu_cxx16__aligned_membufISt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEE7_M_addrEv	__gnu_cxx	__aligned_membuf<std::pair<std::string const, int>>	_M_addr
+_ZNKSt10_Select1stISt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEEclERKS8_	std	_Select1st<std::pair<std::string const, int>>	operator()
+_ZNKSt10unique_ptrIN4game4BossESt14default_deleteIS1_EE3getEv	std	unique_ptr<game::Boss>	get
+_ZNKSt10unique_ptrIN4game4BossESt14default_deleteIS1_EEdeEv	std	unique_ptr<game::Boss>	operator*
+_ZNKSt10unique_ptrIN4game4BossESt14default_deleteIS1_EEptEv	std	unique_ptr<game::Boss>	operator->
+_ZNKSt12_Vector_baseINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE19_M_get_Tp_allocatorEv	std	_Vector_base<std::string, std::allocator<std::string>>	_M_get_Tp_allocator
+_ZNKSt13_Rb_tree_nodeISt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEE9_M_valptrEv	std	_Rb_tree_node<std::pair<std::string const, int>>	_M_valptr
+_ZNKSt14default_deleteIN4game4BossEEclEPS1_	std	default_delete<game::Boss>	operator()
+_ZNKSt15__uniq_ptr_implIN4game4BossESt14default_deleteIS1_EE6_M_ptrEv	std	__uniq_ptr_impl<game::Boss, std::default_delete<game::Boss>>	_M_ptr
+_ZNKSt16initializer_listIiE3endEv	std	initializer_list<int>	end
+_ZNKSt16initializer_listIiE4sizeEv	std	initializer_list<int>	size
+_ZNKSt16initializer_listIiE5beginEv	std	initializer_list<int>	begin
+_ZNKSt17_Rb_tree_iteratorISt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEEdeEv	std	_Rb_tree_iterator<std::pair<std::string const, int>>	operator*
+_ZNKSt18_Rb_tree_node_base11_M_base_ptrEv	std	_Rb_tree_node_base	_M_base_ptr
+_ZNKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiSt4lessIS5_ESaISt4pairIKS5_iEEE4sizeEv	std	map<std::string, int>	size
+_ZNKSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiSt4lessIS5_ESaISt4pairIKS5_iEEE8key_compEv	std	map<std::string, int>	key_comp
+_ZNKSt4lessINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEclERKS5_S8_	std	less<std::string>	operator()
+_ZNKSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE12_M_check_lenEmPKc	std	vector<std::string>	_M_check_len
+_ZNKSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE4sizeEv	std	vector<std::string>	size
+_ZNKSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE8max_sizeEv	std	vector<std::string>	max_size
+_ZNKSt6vectorIiSaIiEE3endEv	std	vector<int>	end
+_ZNKSt6vectorIiSaIiEE4sizeEv	std	vector<int>	size
+_ZNKSt6vectorIiSaIiEE5beginEv	std	vector<int>	begin
+_ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE11_M_is_localEv	std	string	_M_is_local
+_ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE13_M_local_dataEv	std	string	_M_local_data
+_ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE15_M_check_lengthEmmPKc	std	string	_M_check_length
+_ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE16_M_get_allocatorEv	std	string	_M_get_allocator
+_ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE4dataEv	std	string	data
+_ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE4sizeEv	std	string	size
+_ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE6lengthEv	std	string	length
+_ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE7_M_dataEv	std	string	_M_data
+_ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE7compareERKS4_	std	string	compare
+_ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE8capacityEv	std	string	capacity
+_ZNKSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE8max_sizeEv	std	string	max_size
+_ZNKSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE10_Auto_node6_M_keyEv	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_Auto_node	_M_key
+_ZNKSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE13_M_begin_nodeEv	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_M_begin_node
+_ZNKSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE14_M_lower_boundEPSt18_Rb_tree_node_baseSG_RS7_	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_M_lower_bound
+_ZNKSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE4sizeEv	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	size
+_ZNKSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE6_M_endEv	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_M_end
+_ZNKSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE8_M_beginEv	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_M_begin
+_ZNKSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE8key_compEv	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	key_comp
+_ZNSolsEPFRSoS_E	std	ostream	operator<<
+_ZNSolsEi	std	ostream	operator<<
+_ZNSolsEm	std	ostream	operator<<
+_ZNSt10_Head_baseILm0EPN4game4BossELb0EE7_M_headERKS3_	std	_Head_base<0ul, game::Boss*, false>	_M_head
+_ZNSt10_Head_baseILm0EPN4game4BossELb0EE7_M_headERS3_	std	_Head_base<0ul, game::Boss*, false>	_M_head
+_ZNSt10_Head_baseILm0EPN4game4BossELb0EEC1Ev	std	_Head_base<0ul, game::Boss*, false>	_Head_base
+_ZNSt10_Head_baseILm0EPN4game4BossELb0EEC2Ev	std	_Head_base<0ul, game::Boss*, false>	_Head_base
+_ZNSt10_Head_baseILm0ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEELb0EE7_M_headERS8_	std	_Head_base<0ul, std::string const&, false>	_M_head
+_ZNSt10_Head_baseILm0ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEELb0EEC1ES7_	std	_Head_base<0ul, std::string const&, false>	_Head_base
+_ZNSt10_Head_baseILm0ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEELb0EEC2ES7_	std	_Head_base<0ul, std::string const&, false>	_Head_base
+_ZNSt10_Head_baseILm1ESt14default_deleteIN4game4BossEELb1EE7_M_headERS4_	std	_Head_base<1ul, std::default_delete<game::Boss>, true>	_M_head
+_ZNSt10_Head_baseILm1ESt14default_deleteIN4game4BossEELb1EEC1Ev	std	_Head_base<1ul, std::default_delete<game::Boss>, true>	_Head_base
+_ZNSt10_Head_baseILm1ESt14default_deleteIN4game4BossEELb1EEC2Ev	std	_Head_base<1ul, std::default_delete<game::Boss>, true>	_Head_base
+_ZNSt10unique_ptrIN4game4BossESt14default_deleteIS1_EE11get_deleterEv	std	unique_ptr<game::Boss>	get_deleter
+_ZNSt10unique_ptrIN4game4BossESt14default_deleteIS1_EEC1IS3_vEEPS1_	std	unique_ptr<game::Boss>	unique_ptr<std::default_delete<game::Boss>, void>
+_ZNSt10unique_ptrIN4game4BossESt14default_deleteIS1_EEC2IS3_vEEPS1_	std	unique_ptr<game::Boss>	unique_ptr<std::default_delete<game::Boss>, void>
+_ZNSt10unique_ptrIN4game4BossESt14default_deleteIS1_EED1Ev	std	unique_ptr<game::Boss>	~unique_ptr
+_ZNSt10unique_ptrIN4game4BossESt14default_deleteIS1_EED2Ev	std	unique_ptr<game::Boss>	~unique_ptr
+_ZNSt11_Tuple_implILm0EJPN4game4BossESt14default_deleteIS1_EEE7_M_headERKS5_	std	_Tuple_impl<0ul, game::Boss*, std::default_delete<game::Boss>>	_M_head
+_ZNSt11_Tuple_implILm0EJPN4game4BossESt14default_deleteIS1_EEE7_M_headERS5_	std	_Tuple_impl<0ul, game::Boss*, std::default_delete<game::Boss>>	_M_head
+_ZNSt11_Tuple_implILm0EJPN4game4BossESt14default_deleteIS1_EEEC1Ev	std	_Tuple_impl<0ul, game::Boss*, std::default_delete<game::Boss>>	_Tuple_impl
+_ZNSt11_Tuple_implILm0EJPN4game4BossESt14default_deleteIS1_EEEC2Ev	std	_Tuple_impl<0ul, game::Boss*, std::default_delete<game::Boss>>	_Tuple_impl
+_ZNSt11_Tuple_implILm0EJRKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEE7_M_headERS8_	std	_Tuple_impl<0ul, std::string const&>	_M_head
+_ZNSt11_Tuple_implILm0EJRKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEC1EOS8_	std	_Tuple_impl<0ul, std::string const&>	_Tuple_impl
+_ZNSt11_Tuple_implILm0EJRKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEC1ES7_	std	_Tuple_impl<0ul, std::string const&>	_Tuple_impl
+_ZNSt11_Tuple_implILm0EJRKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEC2EOS8_	std	_Tuple_impl<0ul, std::string const&>	_Tuple_impl
+_ZNSt11_Tuple_implILm0EJRKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEC2ES7_	std	_Tuple_impl<0ul, std::string const&>	_Tuple_impl
+_ZNSt11_Tuple_implILm1EJSt14default_deleteIN4game4BossEEEE7_M_headERS4_	std	_Tuple_impl<1ul, std::default_delete<game::Boss>>	_M_head
+_ZNSt11_Tuple_implILm1EJSt14default_deleteIN4game4BossEEEEC1Ev	std	_Tuple_impl<1ul, std::default_delete<game::Boss>>	_Tuple_impl
+_ZNSt11_Tuple_implILm1EJSt14default_deleteIN4game4BossEEEEC2Ev	std	_Tuple_impl<1ul, std::default_delete<game::Boss>>	_Tuple_impl
+_ZNSt11char_traitsIcE2ltERKcS2_	std	char_traits<char>	lt
+_ZNSt11char_traitsIcE4copyEPcPKcm	std	char_traits<char>	copy
+_ZNSt11char_traitsIcE6assignERcRKc	std	char_traits<char>	assign
+_ZNSt11char_traitsIcE6lengthEPKc	std	char_traits<char>	length
+_ZNSt11char_traitsIcE7compareEPKcS2_m	std	char_traits<char>	compare
+_ZNSt12_Vector_baseINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE11_M_allocateEm	std	_Vector_base<std::string, std::allocator<std::string>>	_M_allocate
+_ZNSt12_Vector_baseINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE12_Vector_implC1Ev	std	_Vector_base<std::string, std::allocator<std::string>>	_Vector_impl	_Vector_impl
+_ZNSt12_Vector_baseINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE12_Vector_implC2Ev	std	_Vector_base<std::string, std::allocator<std::string>>	_Vector_impl	_Vector_impl
+_ZNSt12_Vector_baseINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE12_Vector_implD1Ev	std	_Vector_base<std::string, std::allocator<std::string>>	_Vector_impl	~_Vector_impl
+_ZNSt12_Vector_baseINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE12_Vector_implD2Ev	std	_Vector_base<std::string, std::allocator<std::string>>	_Vector_impl	~_Vector_impl
+_ZNSt12_Vector_baseINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE13_M_deallocateEPS5_m	std	_Vector_base<std::string, std::allocator<std::string>>	_M_deallocate
+_ZNSt12_Vector_baseINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE17_Vector_impl_dataC1Ev	std	_Vector_base<std::string, std::allocator<std::string>>	_Vector_impl_data	_Vector_impl_data
+_ZNSt12_Vector_baseINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE17_Vector_impl_dataC2Ev	std	_Vector_base<std::string, std::allocator<std::string>>	_Vector_impl_data	_Vector_impl_data
+_ZNSt12_Vector_baseINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE19_M_get_Tp_allocatorEv	std	_Vector_base<std::string, std::allocator<std::string>>	_M_get_Tp_allocator
+_ZNSt12_Vector_baseINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EEC1Ev	std	_Vector_base<std::string, std::allocator<std::string>>	_Vector_base
+_ZNSt12_Vector_baseINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EEC2Ev	std	_Vector_base<std::string, std::allocator<std::string>>	_Vector_base
+_ZNSt12_Vector_baseINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EED1Ev	std	_Vector_base<std::string, std::allocator<std::string>>	~_Vector_base
+_ZNSt12_Vector_baseINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EED2Ev	std	_Vector_base<std::string, std::allocator<std::string>>	~_Vector_base
+_ZNSt12_Vector_baseIiSaIiEE11_M_allocateEm	std	_Vector_base<int, std::allocator<int>>	_M_allocate
+_ZNSt12_Vector_baseIiSaIiEE12_Vector_implC1ERKS0_	std	_Vector_base<int, std::allocator<int>>	_Vector_impl	_Vector_impl
+_ZNSt12_Vector_baseIiSaIiEE12_Vector_implC2ERKS0_	std	_Vector_base<int, std::allocator<int>>	_Vector_impl	_Vector_impl
+_ZNSt12_Vector_baseIiSaIiEE12_Vector_implD1Ev	std	_Vector_base<int, std::allocator<int>>	_Vector_impl	~_Vector_impl
+_ZNSt12_Vector_baseIiSaIiEE12_Vector_implD2Ev	std	_Vector_base<int, std::allocator<int>>	_Vector_impl	~_Vector_impl
+_ZNSt12_Vector_baseIiSaIiEE13_M_deallocateEPim	std	_Vector_base<int, std::allocator<int>>	_M_deallocate
+_ZNSt12_Vector_baseIiSaIiEE17_Vector_impl_dataC1Ev	std	_Vector_base<int, std::allocator<int>>	_Vector_impl_data	_Vector_impl_data
+_ZNSt12_Vector_baseIiSaIiEE17_Vector_impl_dataC2Ev	std	_Vector_base<int, std::allocator<int>>	_Vector_impl_data	_Vector_impl_data
+_ZNSt12_Vector_baseIiSaIiEE19_M_get_Tp_allocatorEv	std	_Vector_base<int, std::allocator<int>>	_M_get_Tp_allocator
+_ZNSt12_Vector_baseIiSaIiEEC1ERKS0_	std	_Vector_base<int, std::allocator<int>>	_Vector_base
+_ZNSt12_Vector_baseIiSaIiEEC2ERKS0_	std	_Vector_base<int, std::allocator<int>>	_Vector_base
+_ZNSt12_Vector_baseIiSaIiEED1Ev	std	_Vector_base<int, std::allocator<int>>	~_Vector_base
+_ZNSt12_Vector_baseIiSaIiEED2Ev	std	_Vector_base<int, std::allocator<int>>	~_Vector_base
+_ZNSt13_Rb_tree_nodeISt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEE11_M_node_ptrEv	std	_Rb_tree_node<std::pair<std::string const, int>>	_M_node_ptr
+_ZNSt13_Rb_tree_nodeISt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEE9_M_valptrEv	std	_Rb_tree_node<std::pair<std::string const, int>>	_M_valptr
+_ZNSt13runtime_errorC1EPKc	std	runtime_error	runtime_error
+_ZNSt13runtime_errorD1Ev	std	runtime_error	~runtime_error
+_ZNSt15_Rb_tree_header8_M_resetEv	std	_Rb_tree_header	_M_reset
+_ZNSt15_Rb_tree_headerC1Ev	std	_Rb_tree_header	_Rb_tree_header
+_ZNSt15_Rb_tree_headerC2Ev	std	_Rb_tree_header	_Rb_tree_header
+_ZNSt15__new_allocatorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEE10deallocateEPS5_m	std	__new_allocator<std::string>	deallocate
+_ZNSt15__new_allocatorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEE8allocateEmPKv	std	__new_allocator<std::string>	allocate
+_ZNSt15__new_allocatorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEED1Ev	std	__new_allocator<std::string>	~__new_allocator
+_ZNSt15__new_allocatorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEED2Ev	std	__new_allocator<std::string>	~__new_allocator
+_ZNSt15__new_allocatorISt13_Rb_tree_nodeISt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEEE10deallocateEPSA_m	std	__new_allocator<std::_Rb_tree_node<std::pair<std::string const, int>>>	deallocate
+_ZNSt15__new_allocatorISt13_Rb_tree_nodeISt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEEE8allocateEmPKv	std	__new_allocator<std::_Rb_tree_node<std::pair<std::string const, int>>>	allocate
+_ZNSt15__new_allocatorISt13_Rb_tree_nodeISt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEEED1Ev	std	__new_allocator<std::_Rb_tree_node<std::pair<std::string const, int>>>	~__new_allocator
+_ZNSt15__new_allocatorISt13_Rb_tree_nodeISt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEEED2Ev	std	__new_allocator<std::_Rb_tree_node<std::pair<std::string const, int>>>	~__new_allocator
+_ZNSt15__new_allocatorIcE10deallocateEPcm	std	__new_allocator<char>	deallocate
+_ZNSt15__new_allocatorIcE8allocateEmPKv	std	__new_allocator<char>	allocate
+_ZNSt15__new_allocatorIcED1Ev	std	__new_allocator<char>	~__new_allocator
+_ZNSt15__new_allocatorIcED2Ev	std	__new_allocator<char>	~__new_allocator
+_ZNSt15__new_allocatorIiE10deallocateEPim	std	__new_allocator<int>	deallocate
+_ZNSt15__new_allocatorIiE8allocateEmPKv	std	__new_allocator<int>	allocate
+_ZNSt15__new_allocatorIiED1Ev	std	__new_allocator<int>	~__new_allocator
+_ZNSt15__new_allocatorIiED2Ev	std	__new_allocator<int>	~__new_allocator
+_ZNSt15__uniq_ptr_dataIN4game4BossESt14default_deleteIS1_ELb1ELb1EECI1St15__uniq_ptr_implIS1_S3_EEPS1_	std	__uniq_ptr_data<game::Boss, std::default_delete<game::Boss>, true, true>	__uniq_ptr_data
+_ZNSt15__uniq_ptr_dataIN4game4BossESt14default_deleteIS1_ELb1ELb1EECI2St15__uniq_ptr_implIS1_S3_EEPS1_	std	__uniq_ptr_data<game::Boss, std::default_delete<game::Boss>, true, true>	__uniq_ptr_data
+_ZNSt15__uniq_ptr_implIN4game4BossESt14default_deleteIS1_EE10_M_deleterEv	std	__uniq_ptr_impl<game::Boss, std::default_delete<game::Boss>>	_M_deleter
+_ZNSt15__uniq_ptr_implIN4game4BossESt14default_deleteIS1_EE6_M_ptrEv	std	__uniq_ptr_impl<game::Boss, std::default_delete<game::Boss>>	_M_ptr
+_ZNSt15__uniq_ptr_implIN4game4BossESt14default_deleteIS1_EEC1EPS1_	std	__uniq_ptr_impl<game::Boss, std::default_delete<game::Boss>>	__uniq_ptr_impl
+_ZNSt15__uniq_ptr_implIN4game4BossESt14default_deleteIS1_EEC2EPS1_	std	__uniq_ptr_impl<game::Boss, std::default_delete<game::Boss>>	__uniq_ptr_impl
+_ZNSt17_Rb_tree_iteratorISt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEEC1EPSt18_Rb_tree_node_base	std	_Rb_tree_iterator<std::pair<std::string const, int>>	_Rb_tree_iterator
+_ZNSt17_Rb_tree_iteratorISt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEEC2EPSt18_Rb_tree_node_base	std	_Rb_tree_iterator<std::pair<std::string const, int>>	_Rb_tree_iterator
+_ZNSt17_Rb_tree_iteratorISt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEEmmEv	std	_Rb_tree_iterator<std::pair<std::string const, int>>	operator--
+_ZNSt17_Rb_tree_iteratorISt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEEppEv	std	_Rb_tree_iterator<std::pair<std::string const, int>>	operator++
+_ZNSt19__ptr_traits_ptr_toIPKcS0_Lb0EE10pointer_toERS0_	std	__ptr_traits_ptr_to<char const*, char const, false>	pointer_to
+_ZNSt19__ptr_traits_ptr_toIPccLb0EE10pointer_toERc	std	__ptr_traits_ptr_to<char*, char, false>	pointer_to
+_ZNSt20_Rb_tree_key_compareISt4lessINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEC1Ev	std	_Rb_tree_key_compare<std::less<std::string>>	_Rb_tree_key_compare
+_ZNSt20_Rb_tree_key_compareISt4lessINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEC2Ev	std	_Rb_tree_key_compare<std::less<std::string>>	_Rb_tree_key_compare
+_ZNSt23_Rb_tree_const_iteratorISt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEEC1ERKSt17_Rb_tree_iteratorIS8_E	std	_Rb_tree_const_iterator<std::pair<std::string const, int>>	_Rb_tree_const_iterator
+_ZNSt23_Rb_tree_const_iteratorISt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEEC2ERKSt17_Rb_tree_iteratorIS8_E	std	_Rb_tree_const_iterator<std::pair<std::string const, int>>	_Rb_tree_const_iterator
+_ZNSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiSt4lessIS5_ESaISt4pairIKS5_iEEE11lower_boundERS9_	std	map<std::string, int>	lower_bound
+_ZNSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiSt4lessIS5_ESaISt4pairIKS5_iEEE3endEv	std	map<std::string, int>	end
+_ZNSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiSt4lessIS5_ESaISt4pairIKS5_iEEEC1Ev	std	map<std::string, int>	map
+_ZNSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiSt4lessIS5_ESaISt4pairIKS5_iEEEC2Ev	std	map<std::string, int>	map
+_ZNSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiSt4lessIS5_ESaISt4pairIKS5_iEEED1Ev	std	map<std::string, int>	~map
+_ZNSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiSt4lessIS5_ESaISt4pairIKS5_iEEED2Ev	std	map<std::string, int>	~map
+_ZNSt3mapINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiSt4lessIS5_ESaISt4pairIKS5_iEEEixERS9_	std	map<std::string, int>	operator[]
+_ZNSt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEC1IJRS6_EJEEESt21piecewise_construct_tSt5tupleIJDpT_EESB_IJDpT0_EE	std	pair<std::string const, int>	pair<std::string const&>
+_ZNSt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEC1IJRS6_EJLm0EEJEJEEERSt5tupleIJDpT_EERSA_IJDpT1_EESt12_Index_tupleIJXspT0_EEESJ_IJXspT2_EEE	std	pair<std::string const, int>	pair<std::string const&, 0ul>
+_ZNSt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEC2IJRS6_EJEEESt21piecewise_construct_tSt5tupleIJDpT_EESB_IJDpT0_EE	std	pair<std::string const, int>	pair<std::string const&>
+_ZNSt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEC2IJRS6_EJLm0EEJEJEEERSt5tupleIJDpT_EERSA_IJDpT1_EESt12_Index_tupleIJXspT0_EEESJ_IJXspT2_EEE	std	pair<std::string const, int>	pair<std::string const&, 0ul>
+_ZNSt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiED1Ev	std	pair<std::string const, int>	~pair
+_ZNSt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiED2Ev	std	pair<std::string const, int>	~pair
+_ZNSt4pairIPSt18_Rb_tree_node_baseS1_EC1IRS1_S1_Lb1EEEOT_OT0_	std	pair<std::_Rb_tree_node_base*, std::_Rb_tree_node_base*>	pair<std::_Rb_tree_node_base*&, std::_Rb_tree_node_base*, true>
+_ZNSt4pairIPSt18_Rb_tree_node_baseS1_EC1IRS1_S4_Lb1EEEOT_OT0_	std	pair<std::_Rb_tree_node_base*, std::_Rb_tree_node_base*>	pair<std::_Rb_tree_node_base*&, std::_Rb_tree_node_base*&, true>
+_ZNSt4pairIPSt18_Rb_tree_node_baseS1_EC1IS1_RS1_Lb1EEEOT_OT0_	std	pair<std::_Rb_tree_node_base*, std::_Rb_tree_node_base*>	pair<std::_Rb_tree_node_base*, std::_Rb_tree_node_base*&, true>
+_ZNSt4pairIPSt18_Rb_tree_node_baseS1_EC2IRS1_S1_Lb1EEEOT_OT0_	std	pair<std::_Rb_tree_node_base*, std::_Rb_tree_node_base*>	pair<std::_Rb_tree_node_base*&, std::_Rb_tree_node_base*, true>
+_ZNSt4pairIPSt18_Rb_tree_node_baseS1_EC2IRS1_S4_Lb1EEEOT_OT0_	std	pair<std::_Rb_tree_node_base*, std::_Rb_tree_node_base*>	pair<std::_Rb_tree_node_base*&, std::_Rb_tree_node_base*&, true>
+_ZNSt4pairIPSt18_Rb_tree_node_baseS1_EC2IS1_RS1_Lb1EEEOT_OT0_	std	pair<std::_Rb_tree_node_base*, std::_Rb_tree_node_base*>	pair<std::_Rb_tree_node_base*, std::_Rb_tree_node_base*&, true>
+_ZNSt5tupleIJPN4game4BossESt14default_deleteIS1_EEEC1ILb1ELb1EEEv	std	tuple<game::Boss*, std::default_delete<game::Boss>>	tuple<true, true>
+_ZNSt5tupleIJPN4game4BossESt14default_deleteIS1_EEEC2ILb1ELb1EEEv	std	tuple<game::Boss*, std::default_delete<game::Boss>>	tuple<true, true>
+_ZNSt5tupleIJRKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEC1EOS8_	std	tuple<std::string const&>	tuple
+_ZNSt5tupleIJRKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEC1ILb1ELb1EEES7_	std	tuple<std::string const&>	tuple<true, true>
+_ZNSt5tupleIJRKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEC2EOS8_	std	tuple<std::string const&>	tuple
+_ZNSt5tupleIJRKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEC2ILb1ELb1EEES7_	std	tuple<std::string const&>	tuple<true, true>
+_ZNSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE11_S_max_sizeERKS6_	std	vector<std::string>	_S_max_size
+_ZNSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE11_S_relocateEPS5_S8_S8_RS6_	std	vector<std::string>	_S_relocate
+_ZNSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE12_Guard_allocC1EPS5_mRSt12_Vector_baseIS5_S6_E	std	vector<std::string>	_Guard_alloc	_Guard_alloc
+_ZNSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE12_Guard_allocC2EPS5_mRSt12_Vector_baseIS5_S6_E	std	vector<std::string>	_Guard_alloc	_Guard_alloc
+_ZNSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE12_Guard_allocD1Ev	std	vector<std::string>	_Guard_alloc	~_Guard_alloc
+_ZNSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE12_Guard_allocD2Ev	std	vector<std::string>	_Guard_alloc	~_Guard_alloc
+_ZNSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE17_M_realloc_appendIJRKS5_EEEvDpOT_	std	vector<std::string>	_M_realloc_append<std::string const&>
+_ZNSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE3endEv	std	vector<std::string>	end
+_ZNSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE5beginEv	std	vector<std::string>	begin
+_ZNSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE9push_backERKS5_	std	vector<std::string>	push_back
+_ZNSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EEC1Ev	std	vector<std::string>	vector
+_ZNSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EEC2Ev	std	vector<std::string>	vector
+_ZNSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EED1Ev	std	vector<std::string>	~vector
+_ZNSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EED2Ev	std	vector<std::string>	~vector
+_ZNSt6vectorIiSaIiEE11_S_max_sizeERKS0_	std	vector<int>	_S_max_size
+_ZNSt6vectorIiSaIiEE17_S_check_init_lenEmRKS0_	std	vector<int>	_S_check_init_len
+_ZNSt6vectorIiSaIiEE21_M_range_initialize_nIPKiS4_EEvT_T0_m	std	vector<int>	_M_range_initialize_n<int const*, int const*>
+_ZNSt6vectorIiSaIiEE3endEv	std	vector<int>	end
+_ZNSt6vectorIiSaIiEE5beginEv	std	vector<int>	begin
+_ZNSt6vectorIiSaIiEEC1ESt16initializer_listIiERKS0_	std	vector<int>	vector
+_ZNSt6vectorIiSaIiEEC2ESt16initializer_listIiERKS0_	std	vector<int>	vector
+_ZNSt6vectorIiSaIiEED1Ev	std	vector<int>	~vector
+_ZNSt6vectorIiSaIiEED2Ev	std	vector<int>	~vector
+_ZNSt6vectorIiSaIiEEixEm	std	vector<int>	operator[]
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE10_M_destroyEm	std	string	_M_destroy
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE10_M_disposeEv	std	string	_M_dispose
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE10_S_compareEmm	std	string	_S_compare
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE11_M_capacityEm	std	string	_M_capacity
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE11_S_allocateERS3_m	std	string	_S_allocate
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE12_Alloc_hiderC1EPcOS3_	std	string	_Alloc_hider	_Alloc_hider
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE12_Alloc_hiderC1EPcRKS3_	std	string	_Alloc_hider	_Alloc_hider
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE12_Alloc_hiderC2EPcOS3_	std	string	_Alloc_hider	_Alloc_hider
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE12_Alloc_hiderC2EPcRKS3_	std	string	_Alloc_hider	_Alloc_hider
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE12_Alloc_hiderD1Ev	std	string	_Alloc_hider	~_Alloc_hider
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE12_Alloc_hiderD2Ev	std	string	_Alloc_hider	~_Alloc_hider
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE12_M_constructILb1EEEvPKcm	std	string	_M_construct<true>
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE12_M_constructIPKcEEvT_S8_St20forward_iterator_tag	std	string	_M_construct<char const*>
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE13_M_local_dataEv	std	string	_M_local_data
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE13_M_set_lengthEm	std	string	_M_set_length
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE13_S_copy_charsIPKcEEvPcT_S9_	std	string	_S_copy_chars<char const*>
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE16_M_get_allocatorEv	std	string	_M_get_allocator
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE6appendEPKcm	std	string	append
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE6appendERKS4_	std	string	append
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE7_M_dataEPc	std	string	_M_data
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE7_S_copyEPcPKcm	std	string	_S_copy
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE9_M_appendEPKcm	std	string	_M_append
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE9_M_createERmm	std	string	_M_create
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE9_M_lengthEm	std	string	_M_length
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE9_M_mutateEmmPKcm	std	string	_M_mutate
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE9push_backEc	std	string	push_back
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC1EOS4_	std	string	basic_string
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC1ERKS4_	std	string	basic_string
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC1IS3_EEPKcRKS3_	std	string	basic_string<std::allocator<char>>
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC2EOS4_	std	string	basic_string
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC2ERKS4_	std	string	basic_string
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEC2IS3_EEPKcRKS3_	std	string	basic_string<std::allocator<char>>
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEED1Ev	std	string	~basic_string
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEED2Ev	std	string	~basic_string
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEixEm	std	string	operator[]
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEpLERKS4_	std	string	operator+=
+_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEpLEc	std	string	operator+=
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE10_Auto_node9_M_insertES6_IPSt18_Rb_tree_node_baseSH_E	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_Auto_node	_M_insert
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE10_Auto_nodeC1IJRKSt21piecewise_construct_tSt5tupleIJRS7_EESK_IJEEEEERSE_DpOT_	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_Auto_node	_Auto_node<std::piecewise_construct_t const&, std::tuple<std::string const&>, std::tuple<>>
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE10_Auto_nodeC2IJRKSt21piecewise_construct_tSt5tupleIJRS7_EESK_IJEEEEERSE_DpOT_	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_Auto_node	_Auto_node<std::piecewise_construct_t const&, std::tuple<std::string const&>, std::tuple<>>
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE10_Auto_nodeD1Ev	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_Auto_node	~_Auto_node
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE10_Auto_nodeD2Ev	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_Auto_node	~_Auto_node
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE11_M_get_nodeEv	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_M_get_node
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE11_M_leftmostEv	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_M_leftmost
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE11_M_put_nodeEPSt13_Rb_tree_nodeIS8_E	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_M_put_node
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE11lower_boundERS7_	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	lower_bound
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE12_M_drop_nodeEPSt13_Rb_tree_nodeIS8_E	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_M_drop_node
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE12_M_rightmostEv	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_M_rightmost
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE13_Rb_tree_implISC_Lb1EEC1Ev	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_Rb_tree_impl<std::less<std::string>, true>	_Rb_tree_impl
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE13_Rb_tree_implISC_Lb1EEC2Ev	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_Rb_tree_impl<std::less<std::string>, true>	_Rb_tree_impl
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE13_Rb_tree_implISC_Lb1EED1Ev	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_Rb_tree_impl<std::less<std::string>, true>	~_Rb_tree_impl
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE13_Rb_tree_implISC_Lb1EED2Ev	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_Rb_tree_impl<std::less<std::string>, true>	~_Rb_tree_impl
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE14_M_create_nodeIJRKSt21piecewise_construct_tSt5tupleIJRS7_EESJ_IJEEEEEPSt13_Rb_tree_nodeIS8_EDpOT_	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_M_create_node<std::piecewise_construct_t const&, std::tuple<std::string const&>, std::tuple<>>
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE14_M_insert_nodeEPSt18_Rb_tree_node_baseSG_PSt13_Rb_tree_nodeIS8_E	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_M_insert_node
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE15_M_destroy_nodeEPSt13_Rb_tree_nodeIS8_E	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_M_destroy_node
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE17_M_construct_nodeIJRKSt21piecewise_construct_tSt5tupleIJRS7_EESJ_IJEEEEEvPSt13_Rb_tree_nodeIS8_EDpOT_	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_M_construct_node<std::piecewise_construct_t const&, std::tuple<std::string const&>, std::tuple<>>
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE21_M_get_Node_allocatorEv	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_M_get_Node_allocator
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE22_M_emplace_hint_uniqueIJRKSt21piecewise_construct_tSt5tupleIJRS7_EESJ_IJEEEEESt17_Rb_tree_iteratorIS8_ESt23_Rb_tree_const_iteratorIS8_EDpOT_	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_M_emplace_hint_unique<std::piecewise_construct_t const&, std::tuple<std::string const&>, std::tuple<>>
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE24_M_get_insert_unique_posERS7_	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_M_get_insert_unique_pos
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE29_M_get_insert_hint_unique_posESt23_Rb_tree_const_iteratorIS8_ERS7_	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_M_get_insert_hint_unique_pos
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE3endEv	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	end
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE5beginEv	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	begin
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE6_S_keyEPSt13_Rb_tree_nodeIS8_E	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_S_key
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE6_S_keyEPSt18_Rb_tree_node_base	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_S_key
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE6_S_keyERKSt13_Rb_tree_nodeIS8_E	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_S_key
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE7_S_leftEPSt13_Rb_tree_nodeIS8_E	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_S_left
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE7_S_leftEPSt18_Rb_tree_node_base	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_S_left
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE8_M_eraseEPSt13_Rb_tree_nodeIS8_E	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_M_erase
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE8_S_rightEPSt13_Rb_tree_nodeIS8_E	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_S_right
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EE8_S_rightEPSt18_Rb_tree_node_base	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_S_right
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EEC1Ev	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_Rb_tree
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EEC2Ev	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	_Rb_tree
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EED1Ev	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	~_Rb_tree
+_ZNSt8_Rb_treeINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESt4pairIKS5_iESt10_Select1stIS8_ESt4lessIS5_ESaIS8_EED2Ev	std	_Rb_tree<std::string, std::pair<std::string const, int>, std::_Select1st<std::pair<std::string const, int>>, std::less<std::string>, std::allocator<std::pair<std::string const, int>>>	~_Rb_tree
+_ZNSt9__rb_tree12_Node_traitsISt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEPS9_E23_S_insert_and_rebalanceEbPSt18_Rb_tree_node_baseSD_RSC_	std	__rb_tree	_Node_traits<std::pair<std::string const, int>, std::pair<std::string const, int>*>	_S_insert_and_rebalance
+_ZSt10__pop_heapIN9__gnu_cxx17__normal_iteratorIPiSt6vectorIiSaIiEEEENS0_5__ops15_Iter_comp_iterIZ4mainEUliiE_EEEvT_SB_SB_RT0_	std	__pop_heap<__gnu_cxx::__normal_iterator<int*, std::vector<int>>, __gnu_cxx::__ops::_Iter_comp_iter<main::'lambda'(int, int)>>
+_ZSt11__bit_widthImEiT_	std	__bit_width<unsigned long>
+_ZSt11__make_heapIN9__gnu_cxx17__normal_iteratorIPiSt6vectorIiSaIiEEEENS0_5__ops15_Iter_comp_iterIZ4mainEUliiE_EEEvT_SB_RT0_	std	__make_heap<__gnu_cxx::__normal_iterator<int*, std::vector<int>>, __gnu_cxx::__ops::_Iter_comp_iter<main::'lambda'(int, int)>>
+_ZSt11__push_heapIN9__gnu_cxx17__normal_iteratorIPiSt6vectorIiSaIiEEEEliNS0_5__ops14_Iter_comp_valIZ4mainEUliiE_EEEvT_T0_SC_T1_RT2_	std	__push_heap<__gnu_cxx::__normal_iterator<int*, std::vector<int>>, long, int, __gnu_cxx::__ops::_Iter_comp_val<main::'lambda'(int, int)>>
+_ZSt11__sort_heapIN9__gnu_cxx17__normal_iteratorIPiSt6vectorIiSaIiEEEENS0_5__ops15_Iter_comp_iterIZ4mainEUliiE_EEEvT_SB_RT0_	std	__sort_heap<__gnu_cxx::__normal_iterator<int*, std::vector<int>>, __gnu_cxx::__ops::_Iter_comp_iter<main::'lambda'(int, int)>>
+_ZSt11make_uniqueIN4game4BossEJRA5_KcEENSt8__detail9_MakeUniqIT_E15__single_objectEDpOT0_	std	make_unique<game::Boss, char const (&) [5]>
+_ZSt12__get_helperILm0EPN4game4BossEJSt14default_deleteIS1_EEERKT0_RKSt11_Tuple_implIXT_EJS5_DpT1_EE	std	__get_helper<0ul, game::Boss*, std::default_delete<game::Boss>>
+_ZSt12__get_helperILm0EPN4game4BossEJSt14default_deleteIS1_EEERT0_RSt11_Tuple_implIXT_EJS5_DpT1_EE	std	__get_helper<0ul, game::Boss*, std::default_delete<game::Boss>>
+_ZSt12__get_helperILm0ERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEJEERT0_RSt11_Tuple_implIXT_EJS8_DpT1_EE	std	__get_helper<0ul, std::string const&>
+_ZSt12__get_helperILm1ESt14default_deleteIN4game4BossEEJEERT0_RSt11_Tuple_implIXT_EJS4_DpT1_EE	std	__get_helper<1ul, std::default_delete<game::Boss>>
+_ZSt12__miter_baseIN9__gnu_cxx17__normal_iteratorIPiSt6vectorIiSaIiEEEEET_S7_	std	__miter_base<__gnu_cxx::__normal_iterator<int*, std::vector<int>>>
+_ZSt12__niter_wrapIN9__gnu_cxx17__normal_iteratorIPiSt6vectorIiSaIiEEEES2_ET_S7_T0_	std	__niter_wrap<__gnu_cxx::__normal_iterator<int*, std::vector<int>>, int*>
+_ZSt12__relocate_aIPNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEES6_SaIS5_EET0_T_S9_S8_RT1_	std	__relocate_a<std::string*, std::string*, std::allocator<std::string>>
+_ZSt13__adjust_heapIN9__gnu_cxx17__normal_iteratorIPiSt6vectorIiSaIiEEEEliNS0_5__ops15_Iter_comp_iterIZ4mainEUliiE_EEEvT_T0_SC_T1_T2_	std	__adjust_heap<__gnu_cxx::__normal_iterator<int*, std::vector<int>>, long, int, __gnu_cxx::__ops::_Iter_comp_iter<main::'lambda'(int, int)>>
+_ZSt13__countl_zeroImEiT_	std	__countl_zero<unsigned long>
+_ZSt13__heap_selectIN9__gnu_cxx17__normal_iteratorIPiSt6vectorIiSaIiEEEENS0_5__ops15_Iter_comp_iterIZ4mainEUliiE_EEEvT_SB_SB_T0_	std	__heap_select<__gnu_cxx::__normal_iterator<int*, std::vector<int>>, __gnu_cxx::__ops::_Iter_comp_iter<main::'lambda'(int, int)>>
+_ZSt14__partial_sortIN9__gnu_cxx17__normal_iteratorIPiSt6vectorIiSaIiEEEENS0_5__ops15_Iter_comp_iterIZ4mainEUliiE_EEEvT_SB_SB_T0_	std	__partial_sort<__gnu_cxx::__normal_iterator<int*, std::vector<int>>, __gnu_cxx::__ops::_Iter_comp_iter<main::'lambda'(int, int)>>
+_ZSt14__relocate_a_1IPNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEES6_SaIS5_EET0_T_S9_S8_RT1_	std	__relocate_a_1<std::string*, std::string*, std::allocator<std::string>>
+_ZSt16__insertion_sortIN9__gnu_cxx17__normal_iteratorIPiSt6vectorIiSaIiEEEENS0_5__ops15_Iter_comp_iterIZ4mainEUliiE_EEEvT_SB_T0_	std	__insertion_sort<__gnu_cxx::__normal_iterator<int*, std::vector<int>>, __gnu_cxx::__ops::_Iter_comp_iter<main::'lambda'(int, int)>>
+_ZSt16__introsort_loopIN9__gnu_cxx17__normal_iteratorIPiSt6vectorIiSaIiEEEElNS0_5__ops15_Iter_comp_iterIZ4mainEUliiE_EEEvT_SB_T0_T1_	std	__introsort_loop<__gnu_cxx::__normal_iterator<int*, std::vector<int>>, long, __gnu_cxx::__ops::_Iter_comp_iter<main::'lambda'(int, int)>>
+_ZSt17__throw_bad_allocv	std	__throw_bad_alloc
+_ZSt18_Rb_tree_decrementPSt18_Rb_tree_node_base	std	_Rb_tree_decrement
+_ZSt18_Rb_tree_incrementPSt18_Rb_tree_node_base	std	_Rb_tree_increment
+_ZSt18uninitialized_copyIPKiPiET0_T_S4_S3_	std	uninitialized_copy<int const*, int*>
+_ZSt19__relocate_object_aINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEES5_SaIS5_EEvPT_PT0_RT1_	std	__relocate_object_a<std::string, std::string, std::allocator<std::string>>
+_ZSt19__throw_logic_errorPKc	std	__throw_logic_error
+_ZSt19piecewise_construct	std	piecewise_construct
+_ZSt20__throw_length_errorPKc	std	__throw_length_error
+_ZSt21__glibcxx_assert_failPKciS0_S0_	std	__glibcxx_assert_fail
+_ZSt21__unguarded_partitionIN9__gnu_cxx17__normal_iteratorIPiSt6vectorIiSaIiEEEENS0_5__ops15_Iter_comp_iterIZ4mainEUliiE_EEET_SB_SB_SB_T0_	std	__unguarded_partition<__gnu_cxx::__normal_iterator<int*, std::vector<int>>, __gnu_cxx::__ops::_Iter_comp_iter<main::'lambda'(int, int)>>
+_ZSt22__final_insertion_sortIN9__gnu_cxx17__normal_iteratorIPiSt6vectorIiSaIiEEEENS0_5__ops15_Iter_comp_iterIZ4mainEUliiE_EEEvT_SB_T0_	std	__final_insertion_sort<__gnu_cxx::__normal_iterator<int*, std::vector<int>>, __gnu_cxx::__ops::_Iter_comp_iter<main::'lambda'(int, int)>>
+_ZSt22__move_median_to_firstIN9__gnu_cxx17__normal_iteratorIPiSt6vectorIiSaIiEEEENS0_5__ops15_Iter_comp_iterIZ4mainEUliiE_EEEvT_SB_SB_SB_T0_	std	__move_median_to_first<__gnu_cxx::__normal_iterator<int*, std::vector<int>>, __gnu_cxx::__ops::_Iter_comp_iter<main::'lambda'(int, int)>>
+_ZSt22__uninitialized_copy_aIPKiS1_PiiET1_T_T0_S3_RSaIT2_E	std	__uninitialized_copy_a<int const*, int const*, int*, int>
+_ZSt23__copy_move_backward_a2ILb1EPiS0_ET1_T0_S2_S1_	std	__copy_move_backward_a2<true, int*, int*>
+_ZSt25__unguarded_linear_insertIN9__gnu_cxx17__normal_iteratorIPiSt6vectorIiSaIiEEEENS0_5__ops14_Val_comp_iterIZ4mainEUliiE_EEEvT_T0_	std	__unguarded_linear_insert<__gnu_cxx::__normal_iterator<int*, std::vector<int>>, __gnu_cxx::__ops::_Val_comp_iter<main::'lambda'(int, int)>>
+_ZSt26__unguarded_insertion_sortIN9__gnu_cxx17__normal_iteratorIPiSt6vectorIiSaIiEEEENS0_5__ops15_Iter_comp_iterIZ4mainEUliiE_EEEvT_SB_T0_	std	__unguarded_insertion_sort<__gnu_cxx::__normal_iterator<int*, std::vector<int>>, __gnu_cxx::__ops::_Iter_comp_iter<main::'lambda'(int, int)>>
+_ZSt27__unguarded_partition_pivotIN9__gnu_cxx17__normal_iteratorIPiSt6vectorIiSaIiEEEENS0_5__ops15_Iter_comp_iterIZ4mainEUliiE_EEET_SB_SB_T0_	std	__unguarded_partition_pivot<__gnu_cxx::__normal_iterator<int*, std::vector<int>>, __gnu_cxx::__ops::_Iter_comp_iter<main::'lambda'(int, int)>>
+_ZSt28__throw_bad_array_new_lengthv	std	__throw_bad_array_new_length
+_ZSt29_Rb_tree_insert_and_rebalancebPSt18_Rb_tree_node_baseS0_RS_	std	_Rb_tree_insert_and_rebalance
+_ZSt3getILm0EJPN4game4BossESt14default_deleteIS1_EEERKNSt13tuple_elementIXT_ESt5tupleIJDpT0_EEE4typeERKS9_	std	get<0ul, game::Boss*, std::default_delete<game::Boss>>
+_ZSt3getILm0EJPN4game4BossESt14default_deleteIS1_EEERNSt13tuple_elementIXT_ESt5tupleIJDpT0_EEE4typeERS9_	std	get<0ul, game::Boss*, std::default_delete<game::Boss>>
+_ZSt3getILm0EJRKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEERNSt13tuple_elementIXT_ESt5tupleIJDpT0_EEE4typeERSC_	std	get<0ul, std::string const&>
+_ZSt3getILm1EJPN4game4BossESt14default_deleteIS1_EEERNSt13tuple_elementIXT_ESt5tupleIJDpT0_EEE4typeERS9_	std	get<1ul, game::Boss*, std::default_delete<game::Boss>>
+_ZSt3maxIiERKT_S2_S2_	std	max<int>
+_ZSt3maxImERKT_S2_S2_	std	max<unsigned long>
+_ZSt3minIiERKT_S2_S2_	std	min<int>
+_ZSt3minImERKT_S2_S2_	std	min<unsigned long>
+_ZSt4__lgIlET_S0_	std	__lg<long>
+_ZSt4cerr	std	cerr
+_ZSt4cout	std	cout
+_ZSt4endlIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_	std	endl<char, std::char_traits<char>>
+_ZSt4sortIN9__gnu_cxx17__normal_iteratorIPiSt6vectorIiSaIiEEEEZ4mainEUliiE_EvT_S8_T0_	std	sort<__gnu_cxx::__normal_iterator<int*, std::vector<int>>, main::'lambda'(int, int)>
+_ZSt6__sortIN9__gnu_cxx17__normal_iteratorIPiSt6vectorIiSaIiEEEENS0_5__ops15_Iter_comp_iterIZ4mainEUliiE_EEEvT_SB_T0_	std	__sort<__gnu_cxx::__normal_iterator<int*, std::vector<int>>, __gnu_cxx::__ops::_Iter_comp_iter<main::'lambda'(int, int)>>
+_ZSt8_DestroyINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEvPT_	std	_Destroy<std::string>
+_ZSt8_DestroyIPNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEvT_S7_	std	_Destroy<std::string*>
+_ZSt8_DestroyIPiEvT_S1_	std	_Destroy<int*>
+_ZSt9__advanceIPilEvRT_T0_St26random_access_iterator_tag	std	__advance<int*, long>
+_ZSt9iter_swapIN9__gnu_cxx17__normal_iteratorIPiSt6vectorIiSaIiEEEES6_EvT_T0_	std	iter_swap<__gnu_cxx::__normal_iterator<int*, std::vector<int>>, __gnu_cxx::__normal_iterator<int*, std::vector<int>>>
+_ZSteqRKSt17_Rb_tree_iteratorISt4pairIKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEiEESB_	std	operator==
+_ZStlsISt11char_traitsIcEERSt13basic_ostreamIcT_ES5_PKc	std	operator<<<std::char_traits<char>>
+_ZStlsIcSt11char_traitsIcESaIcEERSt13basic_ostreamIT_T0_ES7_RKNSt7__cxx1112basic_stringIS4_S5_T1_EE	std	operator<<<char, std::char_traits<char>, std::allocator<char>>
+_ZStltIcSt11char_traitsIcESaIcEEbRKNSt7__cxx1112basic_stringIT_T0_T1_EESA_	std	operator<<char, std	char_traits<char>, std	allocator<char>>
+_ZTIN4game4BossE	game	Boss	typeinfo
+_ZTIN4game6PlayerE	game	Player	typeinfo
+_ZTISt13runtime_error	std	runtime_error	typeinfo
+_ZTSN4game4BossE	game	Boss	typeinfo_name
+_ZTSN4game6PlayerE	game	Player	typeinfo_name
+_ZTVN4game4BossE	game	Boss	vtable
+_ZTVN4game6PlayerE	game	Player	vtable
+_ZZ4mainENKUliE_clEi	main	'lambda'(int)	operator()
+_ZZ4mainENKUliiE_clEii	main	'lambda'(int, int)	operator()
+_ZZL8greetingvE4text	greeting()	text
+_ZZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE12_M_constructIPKcEEvT_S8_St20forward_iterator_tagEN6_GuardC1EPS4_	std	string	_M_construct<char const*>(char const*, char const*, std::forward_iterator_tag)	_Guard	_Guard
+_ZZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE12_M_constructIPKcEEvT_S8_St20forward_iterator_tagEN6_GuardC2EPS4_	std	string	_M_construct<char const*>(char const*, char const*, std::forward_iterator_tag)	_Guard	_Guard
+_ZZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE12_M_constructIPKcEEvT_S8_St20forward_iterator_tagEN6_GuardD1Ev	std	string	_M_construct<char const*>(char const*, char const*, std::forward_iterator_tag)	_Guard	~_Guard
+_ZZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE12_M_constructIPKcEEvT_S8_St20forward_iterator_tagEN6_GuardD2Ev	std	string	_M_construct<char const*>(char const*, char const*, std::forward_iterator_tag)	_Guard	~_Guard
+_ZdlPvS_	operator delete
+_ZdlPvm	operator delete
+_Znwm	operator new
+_ZnwmPv	operator new

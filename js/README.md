@@ -61,7 +61,7 @@ undefined8 main(void)
 
 ### Loading
 
-`loadDecompiler({ architecture, wasmUrl?, specsUrl? })` fetches `decompiler.wasm` (2.1 MB, 715 KB gzipped) and the architecture's processor description (`specs/x86-64/`: `x86-64.sla`, 501 KB, and three specification files, 29 KB), by default from beside the package's module through `new URL(…, import.meta.url)`, which bundlers follow and copy. `wasmUrl` and `specsUrl` (a directory) serve them from elsewhere. In Node, `file:` URLs are read from disk.
+`loadDecompiler({ architecture, wasmUrl?, specsUrl? })` fetches `decompiler.wasm` (2.1 MB, 719 KB gzipped) and the architecture's processor description (`specs/x86-64/`: `x86-64.sla`, 501 KB, and three specification files, 29 KB), by default from beside the package's module through `new URL(…, import.meta.url)`, which bundlers follow and copy. `wasmUrl` and `specsUrl` (a directory) serve them from elsewhere. In Node, `file:` URLs are read from disk.
 
 The only architecture is `'x86-64'`: Ghidra's `x86:LE:64:default` language with its `gcc` compiler specification, the System V calling convention of Linux and the BSDs.
 
@@ -76,23 +76,52 @@ The module uses WebAssembly exception handling, which Chrome 95, Firefox 100 and
 | Field | What it is |
 | --- | --- |
 | `regions` | The program's memory at its link-time addresses: `{ address, bytes, readOnly, executable }`, not overlapping. Loads from a `readOnly` region are folded to their values, as Ghidra does with read-only memory. A read starting outside every region fails the decompilation; one running past a region's end reads zeros. |
-| `functions` | `{ address, name }`: the entry points the decompiler may start from, and the names it prints for them. At an address named twice, the first name wins. A prototype binds by name, so a PLT stub is named after its symbol (`strcmp`, not `strcmp@plt`). |
-| `data` | `{ address, name, size? }`: global variables, tables and strings' labels. A function's name wins over a data name at its address. |
+| `functions` | `{ address, name, namespace?, symbol? }`: the entry points the decompiler may start from, and the names it prints for them. A `name` is printed as given, never split at a `::`; `namespace` lists the namespaces and classes the function is in, outermost first (see [C++ names](#c-names)); `symbol` is the name prototypes bind by and pointers name it by, by default `name`. At an address named twice, the first name wins. A PLT stub is named after its symbol (`strcmp`, not `strcmp@plt`), which its prototype binds by. |
+| `data` | `{ address, name, size?, namespace?, symbol? }`: global variables, tables and strings' labels, in their namespaces as functions are; a declaration of a global's type binds by its `symbol`, by default `name`. A function's name wins over a data name at its address. |
 | `strings` | `{ address, length }`: string literals, terminator included. A string with a `data` name is typed as a `char` array; any string in read-only memory prints as a literal where a `char *` is expected. |
-| `pointers` | Optional. `{ address, name }`: a pointer-sized slot that holds the address of the function `name`, though the file may not hold it there, such as a GOT entry the dynamic linker fills. A call through the slot is a call of that function, with its name and prototype: `_start`'s `call [rip + __libc_start_main@got]` prints as `__libc_start_main(main,…)`, not `(*pcRam0000000000003fd8)(main,…)`. The function is the image's function of that name, or else one known only by its name, which has no code to decompile. A `data` name at the slot's address names the slot where its value is read (`if (__gmon_start__@got != (code *)0x0)`); without one it prints as the decompiler names a global `code *`. At an address given twice the first is kept, and a function's name at the slot's address wins. |
+| `pointers` | Optional. `{ address, name, namespace?, symbol? }`: a pointer-sized slot that holds the address of a function, though the file may not hold it there, such as a GOT entry the dynamic linker fills. A call through the slot is a call of that function, with its name and prototype: `_start`'s `call [rip + __libc_start_main@got]` prints as `__libc_start_main(main,…)`, not `(*pcRam0000000000003fd8)(main,…)`. The function is the image's function whose `symbol` (or name, for one without) is the pointer's `symbol`, when the pointer has one, else the image's function of the pointer's `name` and `namespace`; or else one known only by the pointer's name, namespace and symbol, which has no code to decompile. A `data` name at the slot's address names the slot where its value is read (`if (__gmon_start__@got != (code *)0x0)`); without one it prints as the decompiler names a global `code *`. At an address given twice the first is kept, and a function's name at the slot's address wins. |
 | `prototypes` | C declarations of the library functions the program calls and the types they use: see [Prototypes](#prototypes). |
 
-Addresses are numbers: every x86-64 user-space address is below 2^53. `openProgram` throws when the image is malformed (overlapping regions, an address that is not a non-negative safe integer). What it could not use without failing is in `program.warnings`: each declaration that could not be read, with its line (``line 3: Syntax error after `size_tt` (in `size_tt strlen(const char *s);`)``), and any message Ghidra printed.
+Addresses are numbers: every x86-64 user-space address is below 2^53. `openProgram` throws when the image is malformed (overlapping regions, an address that is not a non-negative safe integer, an empty namespace) or its options are not ones it takes. What it could not use without failing is in `program.warnings`: each declaration that could not be read, with its line (``line 3: Syntax error after `size_tt` (in `size_tt strlen(const char *s);`)``), and any message Ghidra printed.
+
+`openProgram(image, { namespaces })` sets how far names are qualified with their namespaces, Ghidra's namespace strategy: `'minimal'` (the default), `'all'` or `'none'`, as below.
+
+### C++ names
+
+The package reads no mangled name. A caller with a demangler gives a C++ function its name in its namespaces, split at the `::`s outside template arguments and parameter lists, and its mangled name as the `symbol` it binds by:
+
+```ts
+functions: [
+  { address: 0x5a78, name: 'push_back', namespace: ['std', 'vector<std::string>'],
+    symbol: '_ZNSt6vectorINSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESaIS5_EE9push_backERKS5_' },
+  { address: 0x32d0, name: '__throw_length_error', namespace: ['std'],
+    symbol: '_ZSt20__throw_length_errorPKc' }, // a PLT stub
+  // ...
+],
+data: [{ address: 0xec60, name: 'typeinfo', namespace: ['std', 'runtime_error'], symbol: '_ZTISt13runtime_error', size: 24 }],
+pointers: [{ address: 0xef10, name: '__throw_length_error', namespace: ['std'], symbol: '_ZSt20__throw_length_errorPKc' }],
+```
+
+The decompiler makes each namespace once, from its path, and finds a function in one by its address, so its calls and its own decompilation work as a global function's. Each part of the path is one namespace whatever it holds: `vector<std::string>` is a class of `std`, not `vector<std` and `string>`, and `greeting()` in `['greeting()', 'text']` or `'lambda'(int)` in `['main', "'lambda'(int)"]` are namespaces too. The declarations of `prototypes/glibc.h` bind by `symbol`, so `std::__throw_length_error` keeps `_ZSt20__throw_length_errorPKc`'s prototype and does not return.
+
+A name prints qualified as far as the strategy says. With `'minimal'`, as far as tells it apart where it is used: in `main`, a function of the global scope,
+
+```c
+  std::string::operator+=(auStack_128,auStack_c8);
+  std::vector<std::string>::push_back(auStack_198,auStack_128);
+```
+
+and inside another member of `std::vector<std::string>`, `uStack_30 = size(uStack_40);` and `__throw_length_error(param_3);`; a function's own declaration reads `ulong std::vector<std::string>::_M_check_len(undefined8 param_1,ulong param_2,char *param_3)`. With `'all'`, every name in full unless it is in the scope where it is used (`std::vector<std::string>::size(uStack_40)` there); with `'none'`, never qualified, its declaration included (`ulong _M_check_len(…)`).
 
 The package invents no names. A function or a global the image does not name prints as the decompiler names it (`func_0x00401130()`, `cRam0000000000004018`), and locals and parameters keep the decompiler's names (`iVar1`, `acStack_98`, `param_1`). The Ghidra application's `local_98` comes from a stack analysis on its Java side, which is not part of the decompiler. Types print with Ghidra's names (`undefined8`, `uint`, `ulong`).
 
 ### Decompiling
 
-`program.decompile(address, options?)` returns the C of the function starting at `address`, one of the image's functions, as `{ address, name, text, lines }`, or `{ address, error }` when there is none: no function starts there, it is past a guard below, or the decompiler failed. It throws only when the program was disposed or an argument is not a number it takes. A bug in Ghidra's code that traps the WebAssembly module (a division by zero) throws too, a `WebAssembly.RuntimeError`; nothing in the module can be trusted after one, so dispose the decompiler and load a new one.
+`program.decompile(address, options?)` returns the C of the function starting at `address`, one of the image's functions, as `{ address, name, text, lines }` (`name` as the image gives it, without its namespaces), or `{ address, error }` when there is none: no function starts there, it is past a guard below, or the decompiler failed. It throws only when the program was disposed or an argument is not a number it takes. A bug in Ghidra's code that traps the WebAssembly module (a division by zero) throws too, a `WebAssembly.RuntimeError`; nothing in the module can be trusted after one, so dispose the decompiler and load a new one.
 
 Each line is `{ text, tokens, addresses }`:
 
-- `tokens`, in order, are `{ start, end, kind, address?, target? }`: where the token is in the line's text (UTF-16 code units, end exclusive, the spaces around it left out), its `kind` from Ghidra's syntax highlighting (`keyword`, `comment`, `type`, `function`, `variable`, `constant` or `syntax`; parameters and globals are variables, a function passed as a pointer too; punctuation, operators, labels and field names are syntax), the `address` of the instruction its operation came from (for a comment, the address it is attached to), and the `target` a name refers to: a called function's entry, or the slot of a `pointers` function known only by name; a global's or a string's start, whether it is read or its address taken (`&completed.0`, `main` passed to `__libc_start_main`); a label's code.
+- `tokens`, in order, are `{ start, end, kind, address?, target? }`: where the token is in the line's text (UTF-16 code units, end exclusive, the spaces around it left out), its `kind` from Ghidra's syntax highlighting (`keyword`, `comment`, `type`, `function`, `variable`, `constant` or `syntax`; parameters and globals are variables, a function passed as a pointer too; punctuation, operators, labels and field names are syntax), the `address` of the instruction its operation came from (for a comment, the address it is attached to), and the `target` a name refers to: a called function's entry, or the slot of a `pointers` function known only by name; a global's or a string's start, whether it is read or its address taken (`&completed.0`, `main` passed to `__libc_start_main`); a label's code. A qualified name is one token, its namespaces and `::`s included: `std::string::operator+=` is a `function` token targeting `operator+=`. Ghidra's printer may break a long one at a `::` (`void std::` at the end of a line, `::_M_erase(…)` starting the next); each line then holds a token of it, of the name's kind, and only the last, the name's own, has an address and a target.
 - `addresses` is the set of the line's tokens' addresses, sorted. A line without one, such as a declaration, has none.
 
 For crackme's `    iVar1 = strcmp(acStack_98,"hunter2");`:
@@ -124,11 +153,11 @@ Several programs can be open at once, each holding a copy of its image in the mo
 
 ## Prototypes
 
-The decompiler binds a library function's parameters and return type by name, from C declarations the caller passes as `prototypes`. The package ships `prototypes/glibc.h`, with 537 functions and 8 global variables of glibc 2.43, libm, the C++ runtime and libgcc_s, each the name of a symbol those libraries export (but `atexit` and `at_quick_exit`, which glibc links into each program):
+The decompiler binds a library function's parameters and return type by name, from C declarations the caller passes as `prototypes`: a declaration binds to every function whose `symbol` is its name, or whose name is, for a function without a `symbol`, whatever namespace the function is in. The package ships `prototypes/glibc.h`, with 537 functions and 8 global variables of glibc 2.43, libm, the C++ runtime and libgcc_s, each the name of a symbol those libraries export (but `atexit` and `at_quick_exit`, which glibc links into each program):
 
 - stdio, with the printf family's `_chk` variants (`__printf_chk`, `__fprintf_chk`, `__sprintf_chk`, `__snprintf_chk`) and the scanf family's `__isoc99_` and `__isoc23_` names; string, with the `_chk` functions of `_FORTIFY_SOURCE`; stdlib, with C23's `__isoc23_strtol` family; ctype's `__ctype_b_loc`; unistd, fcntl, `stat`, mmap, dirent, poll, time, signal, setjmp (`_setjmp`, `__sigsetjmp`), err, sockets, pthread, libm;
 - `__libc_start_main`, with `main`'s prototype as its first parameter, `__stack_chk_fail`, `__assert_fail`, `__cxa_atexit`, `__cxa_finalize`;
-- the C++ ABI (`__cxa_throw`, `__cxa_begin_catch`, `__gxx_personality_v0`, `_Unwind_Resume`, …) and `operator new` and `delete` and the `std::__throw_` helpers under their mangled names (`_Znwm`, `_ZdlPv`, `_ZSt20__throw_length_errorPKc`);
+- the C++ ABI (`__cxa_throw`, `__cxa_begin_catch`, `__gxx_personality_v0`, `_Unwind_Resume`, …) and `operator new` and `delete` and the `std::__throw_` helpers under their mangled names (`_Znwm`, `_ZdlPv`, `_ZSt20__throw_length_errorPKc`), which bind to a function named by its demangled name when its `symbol` is the mangled one ([C++ names](#c-names));
 - `stdin`, `stdout`, `stderr`, `environ` and getopt's globals.
 
 50 of the functions are marked `_Noreturn` (`exit`, `_exit`, `abort`, `__stack_chk_fail`, `__assert_fail`, `longjmp`, `err`, `pthread_exit`, `__cxa_throw`, `_Unwind_Resume`, `__libc_start_main`, …), so a call to one ends its block, as in Ghidra.

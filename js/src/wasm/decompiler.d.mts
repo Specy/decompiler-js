@@ -17,7 +17,7 @@ export interface DecompilerModule {
     _decompiler_error(): number
     _decompiler_heap_used(): number
     _decompiler_add_specs(directory: number): number
-    _program_open(image: number, size: number, languageId: number): number
+    _program_open(image: number, size: number, languageId: number, namespaces: number): number
     _program_warnings(program: number): number
     _program_decompile(program: number, address: number, maxInstructions: number, timeLimitMs: number): number
     _program_close(program: number): void

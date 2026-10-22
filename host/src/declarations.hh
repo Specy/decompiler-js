@@ -4,6 +4,7 @@
 #ifndef DECOMPILER_HOST_DECLARATIONS_HH
 #define DECOMPILER_HOST_DECLARATIONS_HH
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -12,7 +13,13 @@
 
 namespace host {
 
-/// Applies each declaration of source to the architecture's symbols:
+/// The program's function and data symbols by the name declarations bind
+/// them by: each one's symbol, or its name when it has none (FunctionName,
+/// DataName), whatever namespace it is in.
+using SymbolsByBinding = std::map<std::string, std::vector<ghidra::Symbol *>>;
+
+/// Applies each declaration of source to the architecture's symbols, found
+/// by name in symbols:
 ///
 /// - a function declaration (`int puts(const char *s);`) becomes the
 ///   prototype of every function of that name, locked as Ghidra locks a
@@ -45,7 +52,7 @@ namespace host {
 /// with its line in source, e.g. "line 3: Undefined identifier: size_t (in
 /// `size_t strlen(const char *s);`)". Never throws for a bad declaration.
 std::vector<std::string> applyDeclarations(ghidra::Architecture &architecture,
-                                           const DataOrganization &organization,
+                                           const DataOrganization &organization, const SymbolsByBinding &symbols,
                                            const std::string &source);
 
 }  // namespace host

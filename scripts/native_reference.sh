@@ -11,10 +11,13 @@
 # with patches/ applied, as the wasm is built: by the host layer's driver (build/native/decompile, which reads the
 # ELF into a program image held in memory) and by Ghidra's console
 # (build/native/decomp_console) restoring the save file the driver writes of
-# that program: its bytes, core types, data-types and symbols, prototypes
-# (from $fixtures/prototypes.h) included. The console
-# then gets the one option the host layer sets (readonly on). The two must
-# print the same C.
+# that program: its bytes, core types, data-types and symbols, its namespaces
+# and the addresses each owns, prototypes (from $fixtures/prototypes.h, or
+# the file an entry names) included. A fixture with a <fixture>.names.tsv
+# beside it has its names put in their namespaces by that table (the
+# driver's --names). The console
+# then gets the one option the host layer sets that is not its default
+# (readonly on). The two must print the same C.
 set -euo pipefail
 
 repo_dir="$(cd "$(dirname "$0")/.." && pwd)"
@@ -22,17 +25,22 @@ cd "$repo_dir"
 scripts/compile_native.sh >/dev/null
 
 fixtures=js/tests/fixtures
+# fixture, function, prototypes (by default $fixtures/prototypes.h)
 references=(
     'crackme main'
     'crackme _start'
+    'factcheck main js/prototypes/glibc.h'
 )
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
 for entry in "${references[@]}"; do
-    read -r fixture function <<<"$entry"
+    read -r fixture function prototypes <<<"$entry"
     out="$fixtures/reference/$fixture-$function.c"
-    build/native/decompile --prototypes "$fixtures/prototypes.h" --save "$work/save.xml" specs/x86-64 "$fixtures/elf/$fixture" "$function" \
+    options=(--prototypes "${prototypes:-$fixtures/prototypes.h}")
+    names="$fixtures/elf/$fixture.names.tsv"
+    if [ -e "$names" ]; then options+=(--names "$names"); fi
+    build/native/decompile "${options[@]}" --save "$work/save.xml" specs/x86-64 "$fixtures/elf/$fixture" "$function" \
         >"$work/driver.c"
     printf 'restore %s\noption readonly on\nload function %s\ndecompile\nprint C\nquit\n' "$work/save.xml" "$function" |
         SLEIGHHOME="$repo_dir/specs/x86-64" build/native/decomp_console >"$work/console.txt"
@@ -48,7 +56,7 @@ for entry in "${references[@]}"; do
     fi
     mkdir -p "$(dirname "$out")"
     cp "$work/driver.c" "$out"
-    build/native/decompile --json --prototypes "$fixtures/prototypes.h" specs/x86-64 "$fixtures/elf/$fixture" \
+    build/native/decompile --json "${options[@]}" specs/x86-64 "$fixtures/elf/$fixture" \
         "$function" 2>/dev/null >"${out%.c}.json"
     echo "$(sha256sum "$out" | cut -d' ' -f1)  $out (driver and console agree)"
     echo "$(sha256sum "${out%.c}.json" | cut -d' ' -f1)  ${out%.c}.json"
