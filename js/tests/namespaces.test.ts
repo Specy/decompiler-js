@@ -410,6 +410,116 @@ describe('images naming no namespace', () => {
     })
 })
 
+describe('many namespaces', () => {
+    const BASE = 0x10000
+
+    /** One function per path, each a `ret`, a byte apart from BASE, named
+     * `f` in its namespace. */
+    function retsIn(paths: string[][]): ProgramImage {
+        return {
+            regions: [
+                { address: BASE, bytes: new Uint8Array(paths.length).fill(0xc3), readOnly: true, executable: true }
+            ],
+            functions: paths.map((namespace, index) => ({ address: BASE + index, name: 'f', namespace })),
+            data: [],
+            strings: [],
+            prototypes: ''
+        }
+    }
+
+    /** The functions of the image that fail to decompile, with why. */
+    function failures(image: ProgramImage, addresses = image.functions.map((fn) => fn.address)) {
+        const program = decompiler.openProgram(image)
+        try {
+            return addresses.flatMap((address) => {
+                const result = program.decompile(address)
+                return 'error' in result ? [`0x${address.toString(16)}: ${result.error}`] : []
+            })
+        } finally {
+            program.dispose()
+        }
+    }
+
+    test('two namespaces of libstdc++ that Ghidra’s name hashes gave alike symbol ids', () => {
+        // Ghidra numbers a scope's symbols from the low 16 bits of its id, and
+        // the ids it hashes from these two paths share them: their first
+        // functions had one id, which the second one's local scope then
+        // clashed with ("Duplicate scope id").
+        const image = retsIn([
+            ['__cxxabiv1', '__fundamental_type_info'],
+            ['std', 'hash<std::error_code>']
+        ])
+        expect(failures(image)).toEqual([])
+    })
+
+    test('every function of 3,000 namespaces decompiles', () => {
+        // Classes of 3 to 24 letters, each in one of 30 namespaces, with two
+        // functions each. Ghidra's hashes of names this varied shared their
+        // low 16 bits about once in 65,536 pairs, so for about 70 pairs here.
+        let seed = 0x2545f491
+        const random = (below: number) => {
+            seed = (Math.imul(seed, 1103515245) + 12345) >>> 0
+            return (seed >>> 8) % below
+        }
+        const word = () =>
+            Array.from({ length: 3 + random(22) }, () => 'abcdefghijklmnopqrstuvwxyz_'[random(27)]).join('')
+        const namespaces = Array.from({ length: 30 }, word)
+        const paths = Array.from({ length: 3000 }, () => [namespaces[random(30)], word()])
+        expect(new Set(paths.map((path) => path.join('::'))).size).toBeGreaterThan(2990)
+        expect(failures(retsIn([...paths, ...paths]))).toEqual([])
+    })
+
+    test('namespaces 65,536 apart, past the 16 bits of an id Ghidra keeps', () => {
+        // Numbered in order, the first three namespaces and the three 65,536
+        // later have ids alike in their low 16 bits; their functions are
+        // decompiled, each the first in its namespace.
+        const count = 0x10000 + 3
+        const image = retsIn(Array.from({ length: count }, (_, index) => [`n${index}`]))
+        const sampled = image.functions.filter((_, index) => index % 0x10000 < 3).map((fn) => fn.address)
+        expect(sampled).toHaveLength(6)
+        expect(failures(image, sampled)).toEqual([])
+    })
+})
+
+describe('a namespace owns its entries’ bytes up to the next entry', () => {
+    // ns::value at 0x1018, 16 bytes, runs past the start of target at
+    // 0x1020; main reads the value's bytes 4 to 7 and calls target.
+    const MAIN = 0x1000
+    const VALUE = 0x1018
+    const TARGET = 0x1020
+    const code = new Uint8Array(0x30).fill(0x90)
+    code.set([0x8b, 0x3d, ...le32(VALUE + 4 - (MAIN + 6))], 0) // mov edi, [rip + …]
+    code.set([0xe8, ...le32(TARGET - (MAIN + 11))], 6) // call target
+    code.set([0xc3], 11) // ret
+    code.set([0xc3], TARGET - MAIN) // target: ret
+
+    function le32(value: number) {
+        return [value & 0xff, (value >> 8) & 0xff, (value >> 16) & 0xff, (value >>> 24) & 0xff]
+    }
+
+    test('a function inside a namespaced datum’s bytes is found by its address', () => {
+        const program = decompiler.openProgram({
+            regions: [{ address: MAIN, bytes: code, readOnly: false, executable: true }],
+            functions: [
+                { address: MAIN, name: 'main' },
+                { address: TARGET, name: 'target' }
+            ],
+            data: [{ address: VALUE, name: 'value', size: 16, namespace: ['ns'] }],
+            strings: [],
+            prototypes: ''
+        })
+        try {
+            // The value's bytes before target's are still the namespace's.
+            const main = decompiled(program.decompile(MAIN))
+            expect(main.lines.map((line) => line.text)).toContain('  target(ns::value._4_4_);')
+            expect(tokenOf(main, 'target')).toEqual(expect.objectContaining({ kind: 'function', target: TARGET }))
+            expect(decompiled(program.decompile(TARGET)).lines[0].text).toBe('void target(void)')
+        } finally {
+            program.dispose()
+        }
+    })
+})
+
 test('openProgram throws on an empty namespace', () => {
     const functions = [{ ...image.functions[0], namespace: ['std', ''] }]
     expect(() => decompiler.openProgram({ ...image, functions })).toThrow(/An empty namespace/)

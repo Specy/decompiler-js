@@ -21,6 +21,32 @@ namespace host {
 
 using namespace ghidra;
 
+/// The global scope and each namespace scope of a program, their symbols
+/// numbered by one count the program keeps. Ghidra numbers a scope's symbols
+/// by the low 16 bits of the scope's id and a count of the scope's own
+/// (ScopeInternal::addSymbolInternal), and a function's local scope takes its
+/// function's id: the k-th functions of two namespaces whose ids share those
+/// bits had one id, and the second one's local scope failed to attach
+/// ("Duplicate scope id"). Ghidra's Java side sends each symbol's id; here no
+/// two symbols share one, however many namespaces there are.
+class NamespaceScope : public ScopeInternal {
+  uint8 &symbolCount;
+
+ protected:
+  Scope *buildSubScope(uint8 id, const string &name) override {
+    return new NamespaceScope(id, name, glb, symbolCount);
+  }
+
+  void addSymbolInternal(Symbol *symbol) override {
+    nextUniqueId = symbolCount++;
+    ScopeInternal::addSymbolInternal(symbol);
+  }
+
+ public:
+  NamespaceScope(uint8 id, const string &name, Architecture *architecture, uint8 &symbolCount)
+      : ScopeInternal(id, name, architecture), symbolCount(symbolCount) {}
+};
+
 /// The architecture of a program image: Ghidra's SleighArchitecture with a
 /// load image served from memory, as its RawBinaryArchitecture and
 /// XmlArchitecture are with one served from a file, and Ghidra's Java names
@@ -51,6 +77,26 @@ class HostArchitecture : public SleighArchitecture {
   void resolveArchitecture(void) override {
     archid = getTarget();
     SleighArchitecture::resolveArchitecture();
+  }
+
+  /// How many symbols the global scope and the namespaces have numbered
+  /// (NamespaceScope).
+  uint8 symbolCount = 0;
+
+  /// The id of the next namespace scopeOf makes; 0 is the global scope's.
+  uint8 nextScopeId = 1;
+
+  /// Each namespace scopeOf has made, by its parent and its name.
+  std::map<std::pair<Scope *, std::string>, Scope *> namespaces;
+
+  // As Architecture::buildDatabase, but the global scope a NamespaceScope,
+  // and the database not taking a namespace's id for a hash of its name
+  // (idByNameHash), since scopeOf gives the ids.
+  Scope *buildDatabase(DocumentStorage &store) override {
+    symboltab = new Database(this, false);
+    Scope *global = new NamespaceScope(0, "", this, symbolCount);
+    symboltab->attachScope(global, nullptr);
+    return global;
   }
 
   // buildSpecFile has registered the compiler specification by then.
@@ -103,28 +149,44 @@ class HostArchitecture : public SleighArchitecture {
   /// registered with it by ownAddresses().
   std::map<Scope *, RangeList> owned;
 
-  /// The namespace scope a path names, each namespace created as needed, as
-  /// Ghidra's readLoaderSymbols creates them from a name split at its `::`s
-  /// (Database::findCreateScopeFromSymbolName, with the id it derives from
-  /// the name and its parent's, Scope::hashScopeName); the global scope for
-  /// an empty path. A namespace's name is never split: findCreate…'s
-  /// delimiter is a byte the name does not hold.
+  /// Where each function, pointer and datum of the image starts, by space.
+  std::map<AddrSpace *, std::set<uint64_t>> starts;
+
+  /// The namespace scope a path names, each namespace made as needed, as
+  /// Ghidra's readLoaderSymbols makes them from a name split at its `::`s,
+  /// but with the next of the host's ids, as Ghidra's Java side sends its
+  /// namespaces' ids, where readLoaderSymbols hashes the name and its
+  /// parent's id (Scope::hashScopeName), which two names can share; the
+  /// global scope for an empty path. A namespace's name is never split.
   Scope *scopeOf(const NamespacePath &path) {
     Scope *scope = symboltab->getGlobalScope();
     for (const std::string &name : path) {
-      std::string delimiter;
-      for (unsigned byte = 1; byte < 256 && delimiter.empty(); ++byte)
-        if (name.find((char)byte) == std::string::npos) delimiter.assign(1, (char)byte);
-      if (delimiter.empty()) throw LowlevelError("A namespace's name holds every byte");
-      std::string basename;
-      scope = symboltab->findCreateScopeFromSymbolName(name + delimiter, delimiter, basename, scope);
+      Scope *&child = namespaces[{scope, name}];
+      if (child == nullptr) child = symboltab->findCreateScope(nextScopeId++, name, scope);
+      scope = child;
     }
     return scope;
   }
 
-  /// Records that the namespace scope owns the bytes from first to last.
+  /// Records where the image's functions, pointers and data start, which
+  /// own() stops a namespace's bytes at.
+  void findStarts(const std::vector<PointerName> &pointers, const std::vector<DataName> &data) {
+    for (const FunctionName &function : image().functions()) starts[getDefaultCodeSpace()].insert(function.address);
+    for (const PointerName &pointer : pointers) starts[getDefaultDataSpace()].insert(pointer.address);
+    for (const DataName &entry : data) starts[getDefaultDataSpace()].insert(entry.address);
+  }
+
+  /// Records that the namespace scope owns the bytes from first to last, or
+  /// up to where the next function, pointer or datum starts: a namespace
+  /// owning that one's address would hide it from lookups by address, which
+  /// search from the owner up and stop at the first scope owning it
+  /// (Scope::stackFunction, stackContainer).
   void own(Scope *scope, AddrSpace *space, uint64_t first, uint64_t last) {
-    if (scope != symboltab->getGlobalScope()) owned[scope].insertRange(space, first, last);
+    if (scope == symboltab->getGlobalScope()) return;
+    const std::set<uint64_t> &entries = starts[space];
+    auto next = entries.upper_bound(first);
+    if (next != entries.end() && *next <= last) last = *next - 1;
+    owned[scope].insertRange(space, first, last);
   }
 
   /// Registers with each namespace the addresses it owns, so that a lookup
@@ -406,6 +468,7 @@ Program::Program(ProgramImage image, const std::string &languageId, const std::s
     architecture->options->set(ELEM_READONLY.getId(), "on");
     architecture->options->set(ELEM_NAMESPACESTRATEGY.getId(), namespaces);
     SymbolsByBinding symbols;
+    architecture->findStarts(pointers, data);
     architecture->addFunctions(symbols);
     architecture->addPointers(pointers, slotFunctions, data, symbols);
     architecture->addData(data, strings, symbols);
