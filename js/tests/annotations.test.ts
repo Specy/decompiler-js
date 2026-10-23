@@ -480,6 +480,23 @@ describe('comments', () => {
         return lines
     }
 
+    /** The lines of the caller's comment at the address, less their indent. */
+    function commentAt(result: Decompiled, address: number): string[] {
+        const first = result.lines.findIndex((line) =>
+            line.tokens.some((token) => token.comment === 'user' && token.address === address)
+        )
+        if (first < 0) throw new Error(`no comment at 0x${address.toString(16)} in\n${result.text}`)
+        const last = result.lines.findIndex((line, index) => index >= first && line.text.endsWith('*/'))
+        return result.lines.slice(first, last + 1).map((line) => line.text.trim())
+    }
+
+    /** The text's lines, as an editor breaks it: at a line feed, a carriage
+     * return, or both. */
+    const lineTexts = (result: Decompiled) => result.text.split(/\r\n|\r|\n/)
+
+    /** How many times the text ends a comment. */
+    const closes = (result: Decompiled) => result.text.split('*/').length - 1
+
     test('go before the statement whose code holds their address', () => {
         const comments = [
             { address: PUSH_RBP, text: 'the frame' },
@@ -537,6 +554,82 @@ describe('comments', () => {
             '/* not * / the end, nor ** / this */'
         ])
         expect(result.lines[0].text).toBe('/* a /* nested * / comment */')
+    })
+
+    test('take a carriage return for a line break, so *\\r/ does not end the comment either', () => {
+        const result = decompileOnce(crackme, MAIN, {
+            comments: [{ address: CALL_STRCMP, text: 'not *\r/ the end,\r\nnor *\r\n/ this' }],
+            functionComment: 'a *\r/ b'
+        })
+        expect(lineTexts(result)).toEqual(result.lines.map((line) => line.text))
+        expect(commentAt(result, CALL_STRCMP)).toEqual(['/* not *', '/ the end,', 'nor *', '/ this */'])
+        expect(result.lines.slice(0, 2).map((line) => line.text)).toEqual(['/* a *', '   / b */'])
+        expect(closes(result)).toBe(closes(decompileOnce(crackme, MAIN)) + 2)
+    })
+
+    test('write a {@ running over a line break as { @, so the text has a line for each line', () => {
+        // Ghidra's printer reads `{@` up to the next `}` as one token, an
+        // annotation, line breaks and all.
+        const text = 'see {@link check\nfor details}'
+        const result = decompileOnce(crackme, MAIN, {
+            comments: [{ address: TEST_EAX, text }],
+            functionComment: text
+        })
+        expect(lineTexts(result)).toEqual(result.lines.map((line) => line.text))
+        expect(commentsAbove(result, 'if (iVar1 == 0) {')).toEqual(['/* see { @link check', 'for details} */'])
+        expect(result.lines.slice(0, 2).map((line) => line.text)).toEqual([
+            '/* see { @link check',
+            '   for details} */'
+        ])
+        // One that closes on its line, or never opens one, is printed as it is.
+        const kept = decompileOnce(crackme, MAIN, {
+            comments: [{ address: TEST_EAX, text: 'see {@link check} and {@ this' }],
+            functionComment: 'see {@link check}\nfor details'
+        })
+        expect(lineTexts(kept)).toEqual(kept.lines.map((line) => line.text))
+        const line = lineOf(kept, '/* see {@link check} and {@ this */')
+        expect(line.tokens.map((token) => tokenText(line, token))).toEqual([
+            '/*',
+            'see',
+            '{@link check}',
+            'and',
+            '{@ this',
+            '*/'
+        ])
+        expect(kept.lines.slice(0, 2).map((line) => line.text)).toEqual(['/* see {@link check}', '   for details */'])
+    })
+
+    test('keep a line of the text for each line, and end where they end, whatever they hold', () => {
+        // Random texts of the pieces Ghidra's printer reads specially.
+        let seed = 0x5eed1e55
+        const random = (below: number) => {
+            seed = (Math.imul(seed, 1103515245) + 12345) >>> 0
+            return (seed >>> 8) % below
+        }
+        const pieces = ['{', '}', '@', '{@', '*', '/', '*/', '\r', '\n', '\r\n', ' ', '\t', 'a', 'bc']
+        const randomText = () => Array.from({ length: random(16) }, () => pieces[random(pieces.length)]).join('')
+        const addresses = [PUSH_RBP, TERMINATOR, CALL_STRCMP, TEST_EAX, CALL_PUTS_CORRECT]
+        /** The text's characters but its spaces and line breaks. */
+        const visible = (text: string) => text.replace(/\s/g, '')
+        withProgram(crackme, (program) => {
+            const plainCloses = closes(decompiled(program.decompile(MAIN)))
+            for (let round = 0; round < 300; round++) {
+                const comments = addresses.map((address) => ({ address, text: randomText() }))
+                const functionComment = randomText()
+                const result = decompiled(program.decompile(MAIN, { comments, functionComment }))
+                const context = JSON.stringify({ comments, functionComment })
+                expect(lineTexts(result), context).toEqual(result.lines.map((line) => line.text))
+                // Each comment ends where it ends, with its words in order.
+                const given = [...comments, { address: MAIN, text: functionComment }].filter(({ text }) => text)
+                expect(closes(result), context).toBe(plainCloses + given.length)
+                for (const { address, text } of given) {
+                    const words = allTokens(result)
+                        .filter((token) => token.comment === 'user' && token.address === address)
+                        .map((token) => token.text)
+                    expect(visible(words.join('')), context).toBe(`/*${visible(text)}*/`)
+                }
+            }
+        })
     })
 
     test('that cannot be placed are listed above the function with unplacedComments, and left out without', () => {

@@ -386,13 +386,34 @@ struct ClearAnalysisAfter {
   }
 };
 
-/// A comment's text as a C comment holds it: each `*/`, which would end the
-/// comment early, written `* /`.
+/// A comment's text as a C comment holds it, each of its lines a line of the
+/// printed function, for the printer as it reads one
+/// (PrintLanguage::emitLineComment). A carriage return, alone or before a
+/// line feed, is a line break: the printer drops one, which would make
+/// `*\r/` end the comment, and keeps one inside an annotation. Each `*/`,
+/// which would end the comment early, is written `* /`. The printer reads
+/// `{@` up to the next `}`, or to the end, as one token, Ghidra's
+/// annotation, a line break inside it staying in the token's text instead of
+/// starting a line; so a `{@` whose text up to the next `}` holds a line
+/// break is written `{ @`, and one on a single line is printed as it is.
 std::string commentText(const std::string &text) {
-  std::string escaped;
+  std::string lines;
   for (size_t i = 0; i < text.size(); ++i) {
-    escaped += text[i];
-    if (text[i] == '*' && i + 1 < text.size() && text[i + 1] == '/') escaped += ' ';
+    if (text[i] != '\r') lines += text[i];
+    else if (i + 1 == text.size() || text[i + 1] != '\n') lines += '\n';
+  }
+  std::string escaped;
+  size_t nextBreak = lines.find('\n');
+  size_t nextClose = lines.find('}');
+  for (size_t i = 0; i < lines.size(); ++i) {
+    escaped += lines[i];
+    if (i + 1 == lines.size()) break;
+    if (lines[i] == '*' && lines[i + 1] == '/') escaped += ' ';
+    if (lines[i] == '{' && lines[i + 1] == '@') {
+      if (nextBreak < i) nextBreak = lines.find('\n', i);
+      if (nextClose < i) nextClose = lines.find('}', i);
+      if (nextBreak < nextClose) escaped += ' ';
+    }
   }
   return escaped;
 }

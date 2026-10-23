@@ -68,12 +68,14 @@ x86-64 processor description 530 KB.
   its name, and a malformed id or an empty name is a `RangeError`.
   `comments` (`{ address, text }`) go into Ghidra's comment database as PRE
   comments, printed before the statement whose code holds each address and
-  above the decompiler's warnings there, `*/` written `* /`;
-  `functionComment` is the plate comment above the declaration; and
-  `unplacedComments` lists the comments no statement holds under Ghidra's
-  "Comments that could not be placed in the function body:", where by
-  default they are left out. Nothing is kept between calls, and a call
-  without these options decompiles as before them; the program image's
+  above the decompiler's warnings there, `\r\n` and `\r` taken for line
+  breaks, `*/` written `* /` and a `{@` running over a line break `{ @`
+  (Ghidra prints `{@…}` as one token, line breaks and all), so `text` has a
+  line for each of `lines`; `functionComment` is the plate comment above the
+  declaration; and `unplacedComments` lists the comments no statement holds
+  under Ghidra's "Comments that could not be placed in the function body:",
+  where by default they are left out. Nothing is kept between calls, and a
+  call without these options decompiles as before them; the program image's
   format is unchanged.
 - Several programs can be open at once. `program.dispose()` frees one,
   `decompiler.dispose()` all of them; a decompilation keeps nothing once it

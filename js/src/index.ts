@@ -221,8 +221,11 @@ export interface LocalName {
 /** A comment at an instruction of the function. */
 export interface LineComment {
     address: number
-    /** Printed as given, each line break starting a new line of the comment,
-     * each `*\/` written `* /`. An empty text adds nothing. */
+    /** Printed as given, each line break (`\n`, `\r\n` or `\r`) starting a
+     * new line of the comment, each `*\/` written `* /`, and a `{@` whose
+     * text up to the next `}` holds a line break written `{ @`, so that the
+     * function's text has a line for each of its lines. An empty text adds
+     * nothing. */
     text: string
 }
 
@@ -247,7 +250,8 @@ export interface DecompileOptions {
      * the order given, before the decompiler's warnings there. */
     comments?: readonly LineComment[]
     /** A comment printed above the function's declaration, Ghidra's plate
-     * comment, before the decompiler's own warnings there. */
+     * comment, before the decompiler's own warnings there; its text is
+     * printed as a {@link LineComment}'s. */
     functionComment?: string
     /** Lists the comments that no statement holds the address of (an
      * instruction without p-code, such as an `endbr64`, code the decompiler
