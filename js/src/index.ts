@@ -430,7 +430,7 @@ export async function loadDecompiler(options: LoadDecompilerOptions): Promise<De
                         json = module._program_decompile(handle, address, maxInstructions, timeLimitMs)
                     } else {
                         const pointer = module._malloc(annotations.length)
-                        if (pointer === 0) throw new Error('Out of memory for the annotations')
+                        if (pointer === 0) throw new Error('Not enough memory to apply your renames and comments to this function.')
                         try {
                             // HEAPU8 is read after _malloc, which may have grown the memory.
                             module.HEAPU8.set(annotations, pointer)
