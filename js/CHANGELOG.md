@@ -8,7 +8,7 @@ emsdk 6.0.9: the caller describes a program in memory and gets a function's
 C as Ghidra prints it, as lines of tokens linked to the instructions they come
 from and to the functions, data and local variables they name, with the
 caller's names for the locals and its comments, in a browser or in Node,
-without Java, a server or files. The wasm is 2.2 MB (726 KB gzipped) and the
+without Java, a server or files. The wasm is 2.2 MB (737 KB gzipped) and the
 x86-64 processor description 530 KB.
 
 - `loadDecompiler({ architecture, wasmUrl?, specsUrl? })` loads the module
@@ -77,6 +77,18 @@ x86-64 processor description 530 KB.
   where by default they are left out. Nothing is kept between calls, and a
   call without these options decompiles as before them; the program image's
   format is unchanged.
+- `openProgram(image, { syscalls: 'linux' })` turns each `syscall`
+  instruction whose number the decompiler finds in RAX into a call of that
+  Linux system call (`sys_write(1,"Hi\n",3)`). The call has Linux's
+  parameters and the compiler specification's `syscall` convention.
+  `sys_exit`, `sys_exit_group` and `sys_rt_sigreturn` do not return. A
+  `syscall` whose number the decompiler does not find, or that Linux does not
+  have, shows the number as its argument (`syscall(param_1)`, `syscall(999)`).
+  The table holds Linux 7.0's 385 x86-64 system calls, 244 with their
+  parameters. `'none'`, the default, keeps Ghidra's `syscall();`. A system
+  call's name has no `target`. When the caller's `prototypes` keep a system
+  call's declaration from applying, the decompilation that found the call
+  adds a warning to `program.warnings`.
 - Several programs can be open at once. `program.dispose()` frees one,
   `decompiler.dispose()` all of them; a decompilation keeps nothing once it
   returns. `decompiler.memory()` reports the wasm memory's size and the part

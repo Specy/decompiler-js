@@ -312,6 +312,7 @@ class LineBuilder {
   Architecture *glb;
   std::deque<RecordingEmit::Reference> &references;
   const std::map<uint64_t, uint64_t> &aliases;
+  const std::set<uint64_t> &untargeted;
   Funcdata *function;
   /// Each symbol's index in variables, -1 for one that is not reported.
   std::map<const Symbol *, int> variableIndex;
@@ -421,9 +422,10 @@ class LineBuilder {
     return true;
   }
 
-  /// functionTarget, with the printer's aliases applied.
+  /// functionTarget, with the printer's aliases applied; none for an
+  /// untargeted function.
   bool aliasedFunctionTarget(const RecordingEmit::Reference &reference, uint64_t &target) const {
-    if (!functionTarget(reference, target)) return false;
+    if (!functionTarget(reference, target) || untargeted.count(target) != 0) return false;
     auto alias = aliases.find(target);
     if (alias != aliases.end()) target = alias->second;
     return true;
@@ -465,8 +467,9 @@ class LineBuilder {
   std::vector<Variable> variables;
 
   LineBuilder(Architecture *architecture, std::deque<RecordingEmit::Reference> &recorded,
-              const std::map<uint64_t, uint64_t> &targetAliases, Funcdata *decompiled)
-      : glb(architecture), references(recorded), aliases(targetAliases), function(decompiled) {}
+              const std::map<uint64_t, uint64_t> &targetAliases, const std::set<uint64_t> &noTargets,
+              Funcdata *decompiled)
+      : glb(architecture), references(recorded), aliases(targetAliases), untargeted(noTargets), function(decompiled) {}
 
   void walk(Decoder &decoder) {
     uint4 element = decoder.openElement();
@@ -548,7 +551,7 @@ DecompiledFunction MarkupPrintC::print(Funcdata *function) {
   std::istringstream input(stream.str());
   PackedDecode decoder(glb);
   decoder.ingestStream(input);
-  LineBuilder builder(glb, recorder->references, aliases, function);
+  LineBuilder builder(glb, recorder->references, aliases, untargeted, function);
   builder.walk(decoder);
   if (!recorder->references.empty())
     throw LowlevelError("The markup is out of step with the printer: tokens left over");

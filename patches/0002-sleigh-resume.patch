@@ -1,7 +1,9 @@
 Why: two programs open at once must each decode their own bytes. A
 SleighArchitecture keeps one translator (Sleigh) per language in a static
 map and, for each new Architecture of that language, resets it to the new
-Architecture's load image and context database (buildTranslator). An
+Architecture's load image and context database (buildTranslator); the
+host's HostArchitecture does the same with its own map of HostSleigh, a
+Sleigh subclass (host/src/program.cc). An
 earlier Architecture still open then decodes its instructions from the
 newer one's bytes, and from freed memory once that one is deleted: in wasm,
 "table index is out of bounds". Ghidra's console and Java side only ever

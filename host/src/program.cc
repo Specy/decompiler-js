@@ -4,6 +4,7 @@
 #include <chrono>
 #include <iterator>
 #include <map>
+#include <memory>
 #include <optional>
 #include <set>
 #include <stdexcept>
@@ -12,6 +13,7 @@
 #include "declarations.hh"
 #include "image_load_image.hh"
 #include "libdecomp.hh"
+#include "system_calls.hh"
 
 #ifndef GHIDRA_VERSION
 #define GHIDRA_VERSION "unknown"
@@ -47,6 +49,75 @@ class NamespaceScope : public ScopeInternal {
       : ScopeInternal(id, name, architecture), symbolCount(symbolCount) {}
 };
 
+/// What the `syscall` instructions of the function being decompiled become
+/// (SystemCallEmit). SLEIGH translates each into its `syscall` operation, a
+/// CALLOTHER without inputs or output, which tells the decompiler nothing:
+/// the registers set for it look unused, and a program's last one, Linux's
+/// exit, seems to fall through into whatever follows it.
+struct SystemCallSites {
+  /// The index of SLEIGH's `syscall` operation.
+  int4 userop = -1;
+  VarnodeData rax{}, rsp{};
+  AddrSpace *code = nullptr, *constant = nullptr;
+  /// For each function by entry, the sites whose system call is known, each
+  /// with the entry of the function standing for that system call.
+  std::map<uint64_t, std::map<uint64_t, uint64_t>> known;
+  /// known's entry for the function being decompiled.
+  const std::map<uint64_t, uint64_t> *calls = nullptr;
+};
+
+/// Passes an instruction's p-code on, each `syscall` operation as its site
+/// makes it: where its system call is known, a call of the function standing
+/// for it, which has the compiler specification's `syscall` convention (RDI,
+/// RSI, RDX, R10, R8 and R9 in, RAX out, RCX and R11 clobbered), the stack
+/// pointer first lowered by the 8 bytes that convention's extrapop gives back
+/// for a return address the instruction never pushes; elsewhere `RAX =
+/// syscall(RAX)`, the operation reading the number, which Program::decompile
+/// looks for, and writing the result, as the instruction does, so that the
+/// code after it does not see the number in RAX still.
+class SystemCallEmit : public PcodeEmit {
+  PcodeEmit &out;
+  const SystemCallSites &sites;
+
+ public:
+  SystemCallEmit(PcodeEmit &out, const SystemCallSites &sites) : out(out), sites(sites) {}
+
+  void dump(const Address &address, OpCode opcode, VarnodeData *output, VarnodeData *inputs, int4 count) override {
+    if (opcode != CPUI_CALLOTHER || count != 1 || inputs[0].offset != (uintb)sites.userop) {
+      out.dump(address, opcode, output, inputs, count);
+      return;
+    }
+    VarnodeData rax = sites.rax, rsp = sites.rsp;
+    auto call = sites.calls->find(address.getOffset());
+    if (call == sites.calls->end()) {
+      VarnodeData read[2] = {inputs[0], rax};
+      out.dump(address, CPUI_CALLOTHER, &rax, read, 2);
+      return;
+    }
+    VarnodeData lowered[2] = {rsp, {sites.constant, 8, rsp.size}};
+    out.dump(address, CPUI_INT_SUB, &rsp, lowered, 2);
+    VarnodeData target = {sites.code, call->second, (uint4)sites.code->getAddrSize()};
+    out.dump(address, CPUI_CALL, nullptr, &target, 1);
+  }
+};
+
+/// SLEIGH's translator, passing its p-code through SystemCallEmit while
+/// sites is set.
+class HostSleigh : public Sleigh {
+ public:
+  HostSleigh(LoadImage *loader, ContextDatabase *context) : Sleigh(loader, context) {}
+
+  /// The system call sites of the function being decompiled, set for its
+  /// decompilation only.
+  const SystemCallSites *sites = nullptr;
+
+  int4 oneInstruction(PcodeEmit &emit, const Address &address) const override {
+    if (sites == nullptr) return Sleigh::oneInstruction(emit, address);
+    SystemCallEmit rewriting(emit, *sites);
+    return Sleigh::oneInstruction(rewriting, address);
+  }
+};
+
 /// The architecture of a program image: Ghidra's SleighArchitecture with a
 /// load image served from memory, as its RawBinaryArchitecture and
 /// XmlArchitecture are with one served from a file, and Ghidra's Java names
@@ -54,19 +125,25 @@ class NamespaceScope : public ScopeInternal {
 class HostArchitecture : public SleighArchitecture {
   ProgramImage pendingImage;
 
-  /// The architecture each of SleighArchitecture's shared translators (one
-  /// per language) was last pointed at.
+  /// The architecture each of the shared translators (one per language) was
+  /// last pointed at.
   static std::map<const Translate *, const HostArchitecture *> &translatorUsers() {
     static std::map<const Translate *, const HostArchitecture *> users;
     return users;
   }
 
-  // SleighArchitecture resets the language's translator to this
-  // architecture's load image and context.
+  // As SleighArchitecture's: one translator per target (language and
+  // compiler), which every program of the target shares, reset to this
+  // architecture's load image and context; but a HostSleigh. Its own cache
+  // stays empty, so isTranslateReused() is false and buildSpecFile names the
+  // .sla file again, which an initialized translator ignores.
   Translate *buildTranslator(DocumentStorage &store) override {
-    Translate *translator = SleighArchitecture::buildTranslator(store);
-    translatorUsers()[translator] = this;
-    return translator;
+    static std::map<std::string, std::unique_ptr<HostSleigh>> translators;
+    std::unique_ptr<HostSleigh> &translator = translators[getTarget()];
+    if (translator) translator->reset(loader, context);
+    else translator = std::make_unique<HostSleigh>(loader, context);
+    translatorUsers()[translator.get()] = this;
+    return translator.get();
   }
 
   void buildLoader(DocumentStorage &store) override {
@@ -141,6 +218,103 @@ class HostArchitecture : public SleighArchitecture {
     if (user == this) return;
     const_cast<Sleigh *>(static_cast<const Sleigh *>(translate))->resume(loader, context);
     user = this;
+  }
+
+  HostSleigh &translator() { return *const_cast<HostSleigh *>(static_cast<const HostSleigh *>(translate)); }
+
+  /// The system call table in use, or nullptr: each `syscall` instruction
+  /// then stays SLEIGH's operation.
+  const SystemCall *(*systemCall)(uint64_t number) = nullptr;
+
+  SystemCallSites systemCalls;
+
+  /// Where the next function standing for a system call goes.
+  uint64_t nextSystemCallEntry = 0;
+
+  /// The entry of the function standing for each system call made so far, by
+  /// number.
+  std::map<uint64_t, uint64_t> systemCallEntries;
+
+  /// Each function standing for a system call, by entry.
+  std::set<uint64_t> systemCallFunctions;
+
+  /// Turns the `syscall` instructions into the table's system calls
+  /// (SystemCallEmit), the functions standing for them placed from
+  /// firstEntry on, 16 bytes apart. The language must have SLEIGH's
+  /// `syscall` operation and the compiler specification a `syscall`
+  /// convention, as x86-64's do.
+  void useSystemCalls(const SystemCall *(*table)(uint64_t), uint64_t firstEntry) {
+    UserPcodeOp *userop = userops.getOp("syscall");
+    if (userop == nullptr || !hasModel("syscall"))
+      throw LowlevelError("The language has no syscall operation and convention");
+    systemCall = table;
+    nextSystemCallEntry = firstEntry;
+    systemCalls.userop = userop->getIndex();
+    systemCalls.rax = translate->getRegister("RAX");
+    systemCalls.rsp = translate->getRegister("RSP");
+    systemCalls.code = getDefaultCodeSpace();
+    systemCalls.constant = getConstantSpace();
+  }
+
+  /// Points the translator at the function's system call sites, when a table
+  /// is in use, until stopSystemCalls.
+  void startSystemCalls(uint64_t entry) {
+    if (systemCall == nullptr) return;
+    systemCalls.calls = &systemCalls.known[entry];
+    translator().sites = &systemCalls;
+  }
+
+  void stopSystemCalls() { translator().sites = nullptr; }
+
+  /// The entry of the function standing for the system call, made the first
+  /// time: a function past every address of the image, without bytes, named
+  /// `sys_` and the call's name, whose name targets nothing, with the call's
+  /// parameters as its prototype under the `syscall` convention, `long` its
+  /// return type (what RAX holds after the instruction), or that convention
+  /// alone when its parameters are not declared. A declaration that cannot
+  /// be applied, which the caller's prototypes could cause, adds a warning.
+  uint64_t systemCallEntry(const SystemCall &call, std::vector<std::string> &warnings) {
+    auto [found, added] = systemCallEntries.emplace(call.number, nextSystemCallEntry);
+    if (!added) return found->second;
+    uint64_t entry = nextSystemCallEntry;
+    nextSystemCallEntry += 16;
+    systemCallFunctions.insert(entry);
+    markup->untarget(entry);
+    std::string name = std::string("sys_") + call.name;
+    FunctionSymbol *symbol = symboltab->getGlobalScope()->addFunction(Address(getDefaultCodeSpace(), entry), name);
+    FuncProto &prototype = symbol->getFunction()->getFuncProto();
+    // The convention locked, or ActionDefaultParams gives a call without a
+    // declaration the default one.
+    prototype.setModel(getModel("syscall"));
+    prototype.setModelLock(true);
+    if (call.noreturn) prototype.setNoReturn(true);
+    if (call.parameters == nullptr) return entry;
+    std::string declaration = "long syscall " + name + "(" + call.parameters + ");";
+    for (std::string warning : applyDeclarations(*this, organization, {{name, {symbol}}}, declaration)) {
+      const std::string line = "line 1: ";
+      if (warning.rfind(line, 0) == 0) warning.erase(0, line.size());
+      warnings.push_back(name + ": " + warning);
+    }
+    return entry;
+  }
+
+  /// Adds each `syscall` site of the function whose number the decompilation
+  /// just done found to be a constant, one of the table's, to the sites whose
+  /// system call is known; returns whether it added any, the function then to
+  /// be decompiled again with each of those a call.
+  bool resolveSystemCalls(Funcdata &function, std::vector<std::string> &warnings) {
+    if (systemCall == nullptr) return false;
+    std::map<uint64_t, uint64_t> &calls = systemCalls.known[function.getAddress().getOffset()];
+    bool added = false;
+    for (auto iter = function.beginOp(CPUI_CALLOTHER); iter != function.endOp(CPUI_CALLOTHER); ++iter) {
+      PcodeOp *op = *iter;
+      if (op->isDead() || op->numInput() != 2 || op->getIn(0)->getOffset() != (uintb)systemCalls.userop) continue;
+      if (!op->getIn(1)->isConstant()) continue;
+      const SystemCall *call = systemCall(op->getIn(1)->getOffset());
+      if (call == nullptr) continue;
+      if (calls.emplace(op->getAddr().getOffset(), systemCallEntry(*call, warnings)).second) added = true;
+    }
+    return added;
   }
 
   const ImageLoadImage &image() const { return *static_cast<const ImageLoadImage *>(loader); }
@@ -485,6 +659,17 @@ void nameVariables(Funcdata &function, const std::vector<Annotations::Local> &lo
   }
 }
 
+/// The first 16-byte boundary past every address the image describes.
+uint64_t pastImage(const ProgramImage &image) {
+  uint64_t end = 0;
+  for (const Region &region : image.regions) end = std::max(end, region.address + region.bytes.size());
+  for (const FunctionName &function : image.functions) end = std::max(end, function.address + 1);
+  for (const DataName &entry : image.data) end = std::max(end, entry.address + std::max<uint64_t>(entry.size, 1));
+  for (const StringRange &string : image.strings) end = std::max(end, string.address + string.length);
+  for (const PointerName &pointer : image.pointers) end = std::max(end, pointer.address + 8);
+  return (end + 15) & ~(uint64_t)15;
+}
+
 /// The address of the function each pointer names: the image's first
 /// function whose symbol (or name, without one) is the pointer's symbol when
 /// it has one, else whose name and namespace path are the pointer's; or else
@@ -500,13 +685,7 @@ std::map<uint64_t, uint64_t> pointedFunctions(ProgramImage &image, std::map<uint
     bySymbol.emplace(function.binding(), function.address);
     byName.emplace(QualifiedName(function.path, function.name), function.address);
   }
-  uint64_t end = 0;
-  for (const Region &region : image.regions) end = std::max(end, region.address + region.bytes.size());
-  for (const FunctionName &function : image.functions) end = std::max(end, function.address + 1);
-  for (const DataName &entry : image.data) end = std::max(end, entry.address + std::max<uint64_t>(entry.size, 1));
-  for (const StringRange &string : image.strings) end = std::max(end, string.address + string.length);
-  for (const PointerName &pointer : image.pointers) end = std::max(end, pointer.address + 8);
-  uint64_t next = (end + 15) & ~(uint64_t)15;
+  uint64_t next = pastImage(image);
   std::map<uint64_t, uint64_t> slotFunctions;
   for (const PointerName &pointer : image.pointers) {
     QualifiedName name(pointer.path, pointer.name);
@@ -535,15 +714,37 @@ std::map<uint64_t, uint64_t> pointedFunctions(ProgramImage &image, std::map<uint
   return slotFunctions;
 }
 
+/// Has the translator rewrite the function's system calls for as long as it
+/// lives.
+struct SystemCallsOf {
+  HostArchitecture &architecture;
+  SystemCallsOf(HostArchitecture &architecture, uint64_t entry) : architecture(architecture) {
+    architecture.startSystemCalls(entry);
+  }
+  ~SystemCallsOf() { architecture.stopSystemCalls(); }
+};
+
+/// How many times a function is decompiled at most, each time with the
+/// system calls the one before found the numbers of. In each of the 76
+/// functions of hello-atexit-static that make system calls, the second finds
+/// no more; a function whose system calls are known already from an earlier
+/// decompilation is decompiled once.
+const int MAX_SYSTEM_CALL_PASSES = 3;
+
 }  // namespace
 
-Program::Program(ProgramImage image, const std::string &languageId, const std::string &namespaces) {
+Program::Program(ProgramImage image, const std::string &languageId, const std::string &namespaces,
+                 const std::string &systemCalls) {
   try {
     if (std::find(std::begin(NAMESPACE_STRATEGIES), std::end(NAMESPACE_STRATEGIES), namespaces) ==
         std::end(NAMESPACE_STRATEGIES))
       throw std::invalid_argument("Unknown namespace strategy: " + namespaces);
+    if (std::find(std::begin(SYSTEM_CALL_TABLES), std::end(SYSTEM_CALL_TABLES), systemCalls) ==
+        std::end(SYSTEM_CALL_TABLES))
+      throw std::invalid_argument("Unknown system call table: " + systemCalls);
     normalize(image);
     std::map<uint64_t, uint64_t> slotFunctions = pointedFunctions(image, placeholders);
+    uint64_t firstSystemCall = pastImage(image);
     std::vector<DataName> data = std::move(image.data);
     std::vector<StringRange> strings = std::move(image.strings);
     std::vector<PointerName> pointers = std::move(image.pointers);
@@ -570,6 +771,8 @@ Program::Program(ProgramImage image, const std::string &languageId, const std::s
     architecture->addData(data, strings, symbols);
     for (const auto &[placeholder, slot] : placeholders) architecture->markup->aliasTarget(placeholder, slot);
     declarationWarnings = applyDeclarations(*architecture, architecture->organization, symbols, prototypes);
+    if (systemCalls == "linux") architecture->useSystemCalls(&linuxSystemCall, firstSystemCall);
+    openingMessages = messages.str();
   } catch (const std::invalid_argument &error) {
     throw std::runtime_error(error.what());
   } catch (...) {
@@ -581,7 +784,7 @@ Program::~Program() = default;
 
 std::vector<std::string> Program::warnings() const {
   std::vector<std::string> all;
-  std::istringstream lines(messages.str());
+  std::istringstream lines(openingMessages);
   for (std::string line; std::getline(lines, line);)
     if (!line.empty()) all.push_back(line);
   all.insert(all.end(), declarationWarnings.begin(), declarationWarnings.end());
@@ -595,8 +798,8 @@ DecompiledFunction Program::decompile(uint64_t address, uint32_t maxInstructions
   try {
     architecture->max_instructions = maxInstructions;
     Address entry(architecture->getDefaultCodeSpace(), address);
-    function = placeholders.count(address) != 0 ? nullptr
-                                                : architecture->symboltab->getGlobalScope()->queryFunction(entry);
+    bool placeholder = placeholders.count(address) != 0 || architecture->systemCallFunctions.count(address) != 0;
+    function = placeholder ? nullptr : architecture->symboltab->getGlobalScope()->queryFunction(entry);
     if (function == nullptr) {
       std::ostringstream message;
       message << "No function starts at 0x" << std::hex << address;
@@ -608,11 +811,17 @@ DecompiledFunction Program::decompile(uint64_t address, uint32_t maxInstructions
     architecture->markup->setDisplayUnplaced(annotations.unplacedComments);
     architecture->useTranslator();
     Action *action = architecture->allacts.getCurrent();
-    action->reset(*function);
     {
       ArmedDeadline armed(timeLimitMs);
-      if (action->perform(*function) < 0 || !function->isProcComplete())
-        throw std::runtime_error("Decompilation of " + function->getName() + " did not complete");
+      SystemCallsOf systemCalls(*architecture, address);
+      for (int pass = 1;; ++pass) {
+        action->reset(*function);
+        if (action->perform(*function) < 0 || !function->isProcComplete())
+          throw std::runtime_error("Decompilation of " + function->getName() + " did not complete");
+        if (pass == MAX_SYSTEM_CALL_PASSES || !architecture->resolveSystemCalls(*function, declarationWarnings))
+          break;
+        architecture->clearAnalysis(function);
+      }
     }
     nameVariables(*function, annotations.locals);
     return architecture->markup->print(function);

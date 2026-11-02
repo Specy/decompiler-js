@@ -93,9 +93,21 @@ export interface ProgramPointer {
  * it is used, `'none'` never. */
 export type NamespaceStrategy = 'minimal' | 'all' | 'none'
 
+/** Which kernel's system calls a `syscall` instruction makes. With `'none'`,
+ * as in Ghidra, `syscall` is an operation without inputs (`syscall();`). With
+ * `'linux'`, it makes Linux's x86-64 system calls: a `syscall` whose number the
+ * decompiler finds in RAX is a call of the system call with that number, named
+ * `sys_` and the kernel's name, with its parameters (`sys_write(1,"Hi\n",3)`).
+ * `sys_exit`, `sys_exit_group` and `sys_rt_sigreturn` do not return. A
+ * `syscall` whose number the decompiler does not find, or that Linux does not
+ * have, shows the number as its argument (`syscall(param_1)`). */
+export type SystemCallTable = 'none' | 'linux'
+
 export interface OpenProgramOptions {
     /** By default `'minimal'`, as in Ghidra. */
     namespaces?: NamespaceStrategy
+    /** By default `'none'`, as in Ghidra. Use `'linux'` for a Linux program. */
+    syscalls?: SystemCallTable
 }
 
 export interface ProgramImage {
@@ -148,7 +160,8 @@ export interface DecompiledToken {
     address?: number
     /** What a name refers to: a function's entry, a global's or string's
      * start, a label's code. A function known only through a pointer has no
-     * entry: its name refers to the pointer's slot. */
+     * entry: its name refers to the pointer's slot. The name of a system call
+     * (`sys_write`) refers to nothing. */
     target?: number
     /** For the name of one of the function's local variables or parameters,
      * its `id` in the function's `variables`. A global has a `target`
@@ -265,7 +278,11 @@ export interface DecompiledProgram {
     /** What went wrong opening the program without stopping it: each
      * declaration of the image's prototypes that could not be read or
      * applied, with its line ("line 3: Syntax error after `size_tt` (in
-     * `size_tt strlen(const char *s);`)"), and any message Ghidra printed. */
+     * `size_tt strlen(const char *s);`)"), and any message Ghidra printed.
+     * With a system call table, it then also lists each system call whose
+     * declaration could not be applied because of a declaration in the
+     * image's prototypes (a typedef named `fd`). The decompilation that first
+     * finds the call adds its warning. */
     readonly warnings: readonly string[]
     /** The C of the function starting at the address, one of the image's
      * functions, or the reason there is none (no function starts there, it
@@ -326,6 +343,7 @@ const EXECUTABLE = 2
 const IMAGE_VERSION = 3
 const ANNOTATIONS_VERSION = 1
 const NAMESPACE_STRATEGIES: readonly NamespaceStrategy[] = ['minimal', 'all', 'none']
+const SYSTEM_CALL_TABLES: readonly SystemCallTable[] = ['none', 'linux']
 
 const isAddress = (value: number) => Number.isSafeInteger(value) && value >= 0
 /** A positive whole number the wasm takes as an unsigned 32-bit integer. */
@@ -406,17 +424,23 @@ export async function loadDecompiler(options: LoadDecompilerOptions): Promise<De
             const namespaces = options?.namespaces ?? 'minimal'
             if (!NAMESPACE_STRATEGIES.includes(namespaces))
                 throw new RangeError(`Not a namespace strategy: ${namespaces}`)
-            const handle = buildProgram(module, image, architecture.language, namespaces)
-            const warningsJson = module._program_warnings(handle)
-            let warnings: string[]
-            try {
-                warnings = JSON.parse(module.UTF8ToString(warningsJson))
-            } finally {
-                module._free(warningsJson)
+            const syscalls = options?.syscalls ?? 'none'
+            if (!SYSTEM_CALL_TABLES.includes(syscalls)) throw new RangeError(`Not a system call table: ${syscalls}`)
+            const handle = buildProgram(module, image, architecture.language, namespaces, syscalls)
+            const readWarnings = (): string[] => {
+                const json = module._program_warnings(handle)
+                try {
+                    return JSON.parse(module.UTF8ToString(json))
+                } finally {
+                    module._free(json)
+                }
             }
+            let warnings = readWarnings()
             let open = true
             const program: DecompiledProgram = {
-                warnings,
+                get warnings() {
+                    return warnings
+                },
                 decompile(address, options) {
                     if (!open) throw new Error('The program was disposed')
                     if (!isAddress(address)) throw new RangeError(`Not an address: ${address}`)
@@ -450,6 +474,8 @@ export async function loadDecompiler(options: LoadDecompilerOptions): Promise<De
                         return decodeFunction(module.UTF8ToString(json))
                     } finally {
                         module._free(json)
+                        // A system call's declaration is applied when a decompilation first finds the call.
+                        if (syscalls !== 'none') warnings = readWarnings()
                     }
                 },
                 dispose() {
@@ -712,7 +738,8 @@ function buildProgram(
     module: DecompilerModule,
     image: ProgramImage,
     language: string,
-    namespaces: NamespaceStrategy
+    namespaces: NamespaceStrategy,
+    syscalls: SystemCallTable
 ): number {
     const { size, write } = encodeImage(image)
     const pointer = module._malloc(size)
@@ -721,7 +748,9 @@ function buildProgram(
         // HEAPU8 is read after _malloc, which may have grown the memory.
         write(module.HEAPU8.subarray(pointer, pointer + size))
         const program = withString(module, language, (name) =>
-            withString(module, namespaces, (strategy) => module._program_open(pointer, size, name, strategy))
+            withString(module, namespaces, (strategy) =>
+                withString(module, syscalls, (table) => module._program_open(pointer, size, name, strategy, table))
+            )
         )
         if (program === 0) throw new Error(lastError(module))
         return program

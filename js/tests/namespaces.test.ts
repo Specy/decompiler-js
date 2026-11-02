@@ -398,7 +398,7 @@ describe('images naming no namespace', () => {
         const pointer = module._malloc(bytes.length)
         module.HEAPU8.set(bytes, pointer)
         const language = cString('x86:LE:64:default:gcc')
-        const program = module._program_open(pointer, bytes.length, language, cString('minimal'))
+        const program = module._program_open(pointer, bytes.length, language, cString('minimal'), cString('none'))
         module._free(pointer)
         expect(module.UTF8ToString(module._decompiler_error())).toBe('')
         expect(program).not.toBe(0)

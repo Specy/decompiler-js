@@ -61,7 +61,7 @@ undefined8 main(void)
 
 ### Loading
 
-`loadDecompiler({ architecture, wasmUrl?, specsUrl? })` fetches `decompiler.wasm` (2.2 MB, 726 KB gzipped) and the architecture's processor description (`specs/x86-64/`: `x86-64.sla`, 501 KB, and three specification files, 29 KB), by default from beside the package's module through `new URL(…, import.meta.url)`, which bundlers follow and copy. `wasmUrl` and `specsUrl` (a directory) serve them from elsewhere. In Node, `file:` URLs are read from disk.
+`loadDecompiler({ architecture, wasmUrl?, specsUrl? })` fetches `decompiler.wasm` (2.2 MB, 737 KB gzipped) and the architecture's processor description (`specs/x86-64/`: `x86-64.sla`, 501 KB, and three specification files, 29 KB), by default from beside the package's module through `new URL(…, import.meta.url)`, which bundlers follow and copy. `wasmUrl` and `specsUrl` (a directory) serve them from elsewhere. In Node, `file:` URLs are read from disk.
 
 The only architecture is `'x86-64'`: Ghidra's `x86:LE:64:default` language with its `gcc` compiler specification, the System V calling convention of Linux and the BSDs.
 
@@ -85,6 +85,8 @@ The module uses WebAssembly exception handling, which Chrome 95, Firefox 100 and
 Addresses are numbers: every x86-64 user-space address is below 2^53. `openProgram` throws when the image is malformed (overlapping regions, an address that is not a non-negative safe integer, an empty namespace) or its options are not ones it takes. What it could not use without failing is in `program.warnings`: each declaration that could not be read, with its line (``line 3: Syntax error after `size_tt` (in `size_tt strlen(const char *s);`)``), and any message Ghidra printed.
 
 `openProgram(image, { namespaces })` sets how far names are qualified with their namespaces, Ghidra's namespace strategy: `'minimal'` (the default), `'all'` or `'none'`, as below.
+
+`openProgram(image, { syscalls })` sets which kernel's system calls a `syscall` instruction makes: `'none'` (the default) or `'linux'`. See [System calls](#system-calls).
 
 ### C++ names
 
@@ -224,6 +226,60 @@ The declarations are read by the decompiler's own C parser, Ghidra's CParse, one
 - a function named after one of the architecture's calling conventions (`syscall`) is read under another name and bound under its own.
 
 What the caller must write differently: an empty parameter list as `(void)`; an array with a size (a parameter as the pointer it decays to); a struct defined before it is referred to, never after; no type's name as a function's or a parameter's (so `stat()` takes a `void *`, `struct stat` sharing its name). A declaration naming no function or global of the program is read and ignored.
+
+## System calls
+
+Ghidra's x86-64 description translates `syscall` into an operation without inputs or output. By default the decompiler prints it as Ghidra does: `syscall();`. The registers set for it look unused and disappear, along with any branch that only chose their values. A program's last system call, Linux's exit, seems to fall through into whatever follows it, often bytes that nothing maps (`halt_baddata()`).
+
+With `openProgram(image, { syscalls: 'linux' })`, the decompiler's own constant propagation looks for each `syscall`'s number in RAX. A `syscall` whose number it finds becomes a call of a function standing for that Linux system call. The function is named `sys_` followed by the kernel's name for the call. It takes the call's parameters, with a struct's address as a `void *`, and returns `long`. It uses the compiler specification's `syscall` convention: RDI, RSI, RDX, R10, R8 and R9 in, RAX out. `sys_exit`, `sys_exit_group` and `sys_rt_sigreturn` do not return.
+
+A program written by hand that asks for a letter, and what the decompiler prints for it:
+
+```asm
+main:   mov  eax, 1             ; write(1, prompt, 15)
+        mov  edi, 1
+        lea  rsi, [rel prompt]
+        mov  edx, 15
+        syscall
+        xor  eax, eax           ; read(0, answer, 16)
+        xor  edi, edi
+        lea  rsi, [rel answer]
+        mov  edx, 16
+        syscall
+        cmp  byte [rel answer], 'A'
+        ...
+        mov  eax, 60            ; exit(0)
+        xor  edi, edi
+        syscall
+
+prompt:   db "Type a letter: ", 0
+retry:    db `Try again\n`, 0
+accepted: db `Accepted\n`, 0
+```
+
+```c
+  sys_write(1,"Type a letter: ",0xf);
+  sys_read(0,&answer,0x10);
+  if (answer == 'A') {
+    buf = "Accepted\n";
+    count = 9;
+  }
+  else {
+    buf = "Try again\n";
+    count = 10;
+  }
+  sys_write(1,buf,count);
+                    /* WARNING: Subroutine does not return */
+  sys_exit(0);
+```
+
+The table holds the 385 system calls of Linux 7.0's `asm/unistd_64.h`. It declares the parameters of 244 of them; for the others, the decompiler finds the parameters in the convention's registers.
+
+A `syscall` whose number is not a constant, or is not one Linux has, stays the operation, with the number as its argument: `syscall(param_1)` in glibc's `syscall()`, or `syscall(999)`.
+
+A function standing for a system call is not in the program. Its name has no `target`, and `decompile` refuses its address. Its declaration is applied when a decompilation first finds the call. A declaration in the caller's `prototypes` can keep it from applying (a typedef named `fd`). The call then keeps its convention, and `program.warnings` gets a warning: ``sys_pread64: Multiple type specifiers at the start (in `long syscall sys_pread64(…);`)``.
+
+A function whose system calls the decompiler finds is decompiled twice within one time limit: once to find them and once with them. The program keeps what it found, so the next time the function is decompiled only once. A function without system calls costs nothing more. Natively, decompiling the 76 functions of hello-atexit-static that make system calls took 4.1 seconds without the table and 13 seconds with it. Five large functions took two thirds of the 13 seconds. Their output, with each call's arguments and result, is half as long again.
 
 ## Performance
 

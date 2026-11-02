@@ -133,11 +133,13 @@ EMSCRIPTEN_KEEPALIVE int decompiler_add_specs(const char *directory) {
 /// Builds the architecture for a program image in the binary form
 /// readProgramImage reads (host/src/program_image.hh), its names qualified
 /// with their namespaces by the strategy namespaces names: "minimal", "all"
-/// or "none" (host::NAMESPACE_STRATEGIES).
+/// or "none" (host::NAMESPACE_STRATEGIES), its `syscall` instructions read
+/// with the system call table systemCalls names: "none" or "linux"
+/// (host::SYSTEM_CALL_TABLES).
 EMSCRIPTEN_KEEPALIVE host::Program *program_open(const uint8_t *image, uint32_t size, const char *languageId,
-                                                 const char *namespaces) {
+                                                 const char *namespaces, const char *systemCalls) {
   try {
-    return new host::Program(host::readProgramImage(image, size), languageId, namespaces);
+    return new host::Program(host::readProgramImage(image, size), languageId, namespaces, systemCalls);
   } catch (const std::exception &error) {
     fail(error);
     return nullptr;

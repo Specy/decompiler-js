@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <deque>
 #include <map>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -172,6 +173,7 @@ class MarkupPrintC : public ghidra::PrintC {
   RecordingEmit *recorder;
   std::ostringstream stream;  // the markup of the function being printed
   std::map<uint64_t, uint64_t> aliases;
+  std::set<uint64_t> untargeted;
 
  public:
   explicit MarkupPrintC(ghidra::Architecture *architecture);
@@ -180,6 +182,10 @@ class MarkupPrintC : public ghidra::PrintC {
   /// a function known only through a pointer targets the pointer's slot
   /// rather than the placeholder it was given.
   void aliasTarget(uint64_t entry, uint64_t target) { aliases[entry] = target; }
+
+  /// Makes a function name whose entry is at entry target nothing: a
+  /// function standing for a system call is not in the program.
+  void untarget(uint64_t entry) { untargeted.insert(entry); }
 
   /// The function, decompiled already, as lines of linked tokens.
   DecompiledFunction print(ghidra::Funcdata *function);

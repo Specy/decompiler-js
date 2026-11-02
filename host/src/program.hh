@@ -70,10 +70,17 @@ extern const char *const NAMESPACE_STRATEGIES[3];
 /// they name, and its prototypes bound to its functions and data by their
 /// symbols (by their names, for those without one). A function known only
 /// through a pointer is placed past the image's addresses, and its name's
-/// target is the pointer's slot. Errors from Ghidra surface as
-/// std::runtime_error carrying Ghidra's explanation.
+/// target is the pointer's slot. With a system call table, each `syscall`
+/// instruction whose number the decompiler finds is a call of a function
+/// standing for that system call (`sys_write(1,"Hi\n",3)`), placed past
+/// those, with the call's prototype; one whose number it does not find reads
+/// it, `syscall(param_1)`. Errors from Ghidra surface as std::runtime_error
+/// carrying Ghidra's explanation.
 class Program {
   std::ostringstream messages;
+  /// What Ghidra printed to messages while the program was built; what it
+  /// prints during a decompilation is not a warning about the program.
+  std::string openingMessages;
   std::vector<std::string> declarationWarnings;
   /// The placeholder address of each function known only through a pointer,
   /// and the pointer's slot.
@@ -83,8 +90,10 @@ class Program {
  public:
   /// languageId names the processor and compiler, as Ghidra's language id
   /// followed by the compiler id: "x86:LE:64:default:gcc". namespaces is one
-  /// of NAMESPACE_STRATEGIES.
-  Program(ProgramImage image, const std::string &languageId, const std::string &namespaces = "minimal");
+  /// of NAMESPACE_STRATEGIES, systemCalls one of SYSTEM_CALL_TABLES
+  /// (system_calls.hh).
+  Program(ProgramImage image, const std::string &languageId, const std::string &namespaces = "minimal",
+          const std::string &systemCalls = "none");
   ~Program();
 
   /// Ghidra's default for maxInstructions, DecompileOptions'
@@ -99,15 +108,18 @@ class Program {
   /// 100000 instructions") and gives up once it has worked for timeLimitMs
   /// milliseconds ("main took longer than 30 seconds to decompile"), checking
   /// the time before each pass of each of its actions
-  /// (patches/0001-action-checkpoint.patch). The annotations name variables
-  /// and add comments to this decompilation only.
+  /// (patches/0001-action-checkpoint.patch). With a system call table, a
+  /// function whose system calls' numbers it finds is decompiled again, with
+  /// those calls, and the time limit covers both. The annotations name
+  /// variables and add comments to this decompilation only.
   DecompiledFunction decompile(uint64_t address, uint32_t maxInstructions = DEFAULT_MAX_INSTRUCTIONS,
                                uint32_t timeLimitMs = DEFAULT_TIME_LIMIT_MS,
                                const Annotations &annotations = Annotations());
 
   /// What went wrong building the program without stopping it: each line
   /// Ghidra printed while building the architecture, then each declaration
-  /// of the image's prototypes that could not be read or applied.
+  /// of the image's prototypes that could not be read or applied, then each
+  /// system call's that could not be, once a decompilation has found it.
   std::vector<std::string> warnings() const;
 
   /// Writes the program as a save file of Ghidra's XmlArchitecture: the

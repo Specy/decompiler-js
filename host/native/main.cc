@@ -4,7 +4,7 @@
 //   decompile [--prototypes <file.h>] [--save <file.xml>] [--repeat <n>] [--json]
 //             [--max-instructions <n>] [--time-limit <ms>] [--image]
 //             [--names <file.tsv>] [--namespaces minimal|all|none]
-//             [--local <id>=<name>]... [--comment <0xaddress>=<text>]...
+//             [--syscalls none|linux] [--local <id>=<name>]... [--comment <0xaddress>=<text>]...
 //             [--function-comment <text>] [--unplaced] [--variables]
 //             <spec directory> <elf> <function name or 0xaddress>
 //
@@ -24,7 +24,8 @@
 // first, then its name in them, separated by tabs
 // (`_ZNSt6vectorIiSaIiEE4sizeEv`, `std`, `vector<int>`, `size`): the symbol's
 // name becomes the entry's symbol. --namespaces is the strategy the wasm's
-// openProgram takes, by default minimal. --local names a local variable or
+// openProgram takes, by default minimal, and --syscalls its system call
+// table, by default none. --local names a local variable or
 // parameter by the id the markup reports, --comment adds a comment at an
 // instruction and --function-comment one above the function, a `\n` in
 // either text starting a new line, and --unplaced lists the comments that
@@ -114,7 +115,7 @@ void rename(Entry &entry, const std::map<std::string, std::vector<std::string>> 
 }  // namespace
 
 int main(int argc, char **argv) {
-  std::string savePath, prototypesPath, namesPath, namespaces = "minimal";
+  std::string savePath, prototypesPath, namesPath, namespaces = "minimal", systemCalls = "none";
   int repeat = 1;
   bool json = false;
   bool imageFile = false;
@@ -141,6 +142,7 @@ int main(int argc, char **argv) {
     else if (option == "--prototypes") prototypesPath = argv[++i];
     else if (option == "--names") namesPath = argv[++i];
     else if (option == "--namespaces") namespaces = argv[++i];
+    else if (option == "--syscalls") systemCalls = argv[++i];
     else if (option == "--repeat") repeat = std::stoi(argv[++i]);
     else if (option == "--max-instructions") maxInstructions = (uint32_t)std::stoul(argv[++i]);
     else if (option == "--time-limit") timeLimitMs = (uint32_t)std::stoul(argv[++i]);
@@ -149,8 +151,8 @@ int main(int argc, char **argv) {
   if (argc - i != 3) {
     std::cerr << "usage: decompile [--prototypes <file.h>] [--save <file.xml>] [--repeat <n>] [--json] "
                  "[--max-instructions <n>] [--time-limit <ms>] [--image] [--names <file.tsv>] "
-                 "[--namespaces minimal|all|none] [--local <id>=<name>]... [--comment <0xaddress>=<text>]... "
-                 "[--function-comment <text>] [--unplaced] [--variables] "
+                 "[--namespaces minimal|all|none] [--syscalls none|linux] [--local <id>=<name>]... "
+                 "[--comment <0xaddress>=<text>]... [--function-comment <text>] [--unplaced] [--variables] "
                  "<spec directory> <elf> <function name or 0xaddress>\n";
     return 2;
   }
@@ -185,7 +187,7 @@ int main(int argc, char **argv) {
 
     auto start = std::chrono::steady_clock::now();
     host::startLibrary({specDirectory});
-    host::Program program(std::move(image), LANGUAGE, namespaces);
+    host::Program program(std::move(image), LANGUAGE, namespaces, systemCalls);
     double build = millisecondsSince(start);
     if (!savePath.empty()) {
       std::ofstream out(savePath);
