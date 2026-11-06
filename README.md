@@ -1,8 +1,14 @@
 # decompiler-js
 
-Ghidra's C++ decompiler, from Ghidra 12.1.4, compiled to WebAssembly, for decompiling machine code in a browser or in Node without Java or a server.
+Ghidra's C++ decompiler from Ghidra 12.1.4, compiled to WebAssembly. It decompiles machine code in a browser or in Node without Java or a server.
 
-The caller describes a program (its memory, the names of its functions and data and the namespaces they are in, where its strings are, which slots hold the addresses of which functions, C declarations of the library functions it calls, and whether its `syscall` instructions make Linux system calls) and gets a function's C as Ghidra prints it, as lines of tokens, each linked to the instruction it came from and to the function, data or local variable it names; it can name the locals by the ids the decompiler reports and add comments, which Ghidra places above the statements they belong to. One architecture so far: x86-64, with the System V calling convention. The npm package, `@specy/decompiler`, is in `js/`; its [README](js/README.md) documents the API, naming variables and adding comments, the glibc prototypes it ships, the limits on a decompilation's instructions and time, and measurements.
+## Usage
+
+The caller describes the program's memory, function and data names and their namespaces, strings, and slots that hold function addresses. It can also supply C declarations for library functions and specify whether `syscall` instructions make Linux system calls.
+
+The decompiler returns a function's C as Ghidra prints it, in lines of tokens. Tokens link to the instructions they came from and to the functions, data or local variables they name. The caller can name locals using the ids the decompiler reports and add comments, which Ghidra places above the statements they belong to.
+
+The supported architecture is x86-64 with the System V calling convention. The npm package, `@specy/decompiler`, is in `js/`. Its [README](js/README.md) documents the API, naming variables and adding comments, the glibc prototypes it ships, the instruction and time limits on a decompilation, and measurements.
 
 ## Layout
 
@@ -27,7 +33,7 @@ The wasm and the compiled processor descriptions are committed, so the package b
 | `scripts/native_reference.sh` | Writes the native reference decompilations in `js/tests/fixtures/reference/`, checked against Ghidra's console. |
 | `scripts/compile_decompiler.sh` | Builds `js/src/wasm/decompiler.{mjs,wasm}`, with `patches/` applied (`source ~/emsdk/emsdk_env.sh` first). |
 
-Both builds compile the copy of the sources `scripts/patched_sources.sh` writes. Each build script prints sha256 lines for its outputs; record them in the commit that changes them. The same sources and emsdk build the same wasm, byte for byte.
+The native and wasm builds compile the copy of the sources that `scripts/patched_sources.sh` writes. The scripts for the processor descriptions, native references and wasm print sha256 lines for their outputs; record them in the commit that changes them. The same sources and emsdk build the same wasm, byte for byte.
 
 ## Licence
 
